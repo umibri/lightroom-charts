@@ -8,6 +8,6 @@ Local, privacy-first photo analytics. Load a Lightroom catalog (`.lrcat`/`.db`) 
 
 - **Build/UI:** Vite 7 · React 18+ · TypeScript
 - **Styling:** Tailwind CSS
-- **Routing:** React Router
+- **Routing:** Tanstack Router
 - **DB (browser):** `sql.js` (WASM SQLite) running in a **Web Worker**
 - **Quality:** ESLint (Flat Config) · Prettier 3 · Husky + lint-staged
