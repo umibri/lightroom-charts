@@ -1,7 +1,7 @@
 import { createRootRoute, createRoute } from '@tanstack/react-router';
 import Root from '@router/Root';
-import Load from '@pages/Load';
-import Stats from '@pages/Stats';
+import LoadRoute from '@/routes/load/LoadRoute';
+import StatsRoute from '@/routes/stats/StatsRoute';
 
 // Root layout (header + outlet)
 const rootRoute = createRootRoute({
@@ -12,19 +12,19 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: Load, // default to /load for now
+  component: LoadRoute, // default to /load for now
 });
 
 const loadRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/load',
-  component: Load,
+  component: LoadRoute,
 });
 
 const statsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/stats',
-  component: Stats,
+  component: StatsRoute,
 });
 
 // Build the route tree and router
