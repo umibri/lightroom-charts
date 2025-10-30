@@ -1,22 +1,33 @@
+import React from 'react';
+import { query } from '@/lib/dbClient';
+
 function StatsRoute() {
+  const [ok, setOk] = React.useState<unknown>(null);
+  const [err, setErr] = React.useState<string>('');
+
+  React.useEffect(() => {
+    (async () => {
+      try {
+        const rows = await query<{ ok: number }>('SELECT 1 AS ok');
+        setOk(rows[0]?.ok);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } catch (e: any) {
+        setErr('Query failed');
+        console.error(e);
+      }
+    })();
+  }, []);
+
   return (
-    <section className="grid gap-6 md:grid-cols-4">
-      <aside className="md:col-span-1 space-y-3">
-        <h2 className="text-sm font-medium text-gray-700">Filters</h2>
-        <div className="rounded-lg border p-3 text-sm text-gray-600">
-          Date presets / Lens / Camera (TBD)
-        </div>
-      </aside>
-      <div className="md:col-span-3 space-y-4">
-        <h1 className="text-xl font-semibold">Stats</h1>
-        <div className="rounded-lg border p-8 text-center text-gray-600">
-          Timeline chart placeholder
-        </div>
-        <div className="rounded-lg border p-8 text-center text-gray-600">
-          Lens / Camera chart placeholders
-        </div>
-      </div>
-    </section>
+    <div className="p-6">
+      <h1 className="text-2xl font-semibold mb-4">Stats</h1>
+      {err ? (
+        <div className="text-red-600">{err}</div>
+      ) : (
+        <pre className="text-sm">Smoke test: {JSON.stringify({ ok })}</pre>
+      )}
+      {/* Later: charts */}
+    </div>
   );
 }
 
