@@ -10,8 +10,8 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, 'src'),
       '@lib': path.resolve(__dirname, 'src/lib'),
-      '@pages': path.resolve(__dirname, 'src/pages'),
       '@router': path.resolve(__dirname, 'src/router'),
+      '@routes': path.resolve(__dirname, 'src/routes'),
       '@worker': path.resolve(__dirname, 'src/worker'),
     },
   },

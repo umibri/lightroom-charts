@@ -1,4 +1,4 @@
-function Stats() {
+function StatsRoute() {
   return (
     <section className="grid gap-6 md:grid-cols-4">
       <aside className="md:col-span-1 space-y-3">
@@ -20,4 +20,4 @@ function Stats() {
   );
 }
 
-export default Stats;
+export default StatsRoute;

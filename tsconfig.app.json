@@ -13,8 +13,8 @@
     "paths": {
       "@/*": ["src/*"],
       "@lib/*": ["src/lib/*"],
-      "@pages/*": ["src/pages/*"],
       "@router/*": ["src/router/*"],
+      "@routes/*": ["src/routes/*"],
       "@worker/*": ["src/worker/*"]
     },
 

@@ -1,4 +1,4 @@
-function Load() {
+function LoadRoute() {
   return (
     <section className="space-y-4">
       <h1 className="text-xl font-semibold">Load a catalog</h1>
@@ -12,4 +12,4 @@ function Load() {
   );
 }
 
-export default Load;
+export default LoadRoute;
