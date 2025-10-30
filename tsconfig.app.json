@@ -12,8 +12,10 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
+      "@lib/*": ["src/lib/*"],
       "@pages/*": ["src/pages/*"],
-      "@router/*": ["src/router/*"]
+      "@router/*": ["src/router/*"],
+      "@worker/*": ["src/worker/*"]
     },
 
     /* Bundler mode */
