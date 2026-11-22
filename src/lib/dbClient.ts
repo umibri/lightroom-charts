@@ -1,14 +1,15 @@
 import * as Comlink from 'comlink';
 import type { WorkerAPI } from '@/worker/db.worker';
+import type { Param } from '@/catalog/db.ts';
 
 let proxy: Comlink.Remote<WorkerAPI> | null = null;
 
-/** Lazily create and cache the worker proxy */
-function getProxy(): Comlink.Remote<WorkerAPI> {
+/** The catalog worker, created on first use and kept for the page's lifetime. */
+export function catalog(): Comlink.Remote<WorkerAPI> {
   if (!proxy) {
     const worker = new Worker(new URL('../worker/db.worker.ts', import.meta.url), {
       type: 'module',
-      name: 'sqlite-worker',
+      name: 'catalog-worker',
     });
     proxy = Comlink.wrap<WorkerAPI>(worker);
   }
@@ -16,17 +17,14 @@ function getProxy(): Comlink.Remote<WorkerAPI> {
 }
 
 /**
- * Initialize the database in the worker.
- * The ArrayBuffer is **transferred** to the worker (no copy on the hop), so
- * `bytes.buffer` is detached afterwards and must not be reused.
+ * Open a catalog. The File handle is structured-cloned (cheap; no bytes are
+ * copied on the main thread) and read inside the worker.
  */
-export async function initDatabase(bytes: Uint8Array) {
-  const p = getProxy();
-  return p.init(Comlink.transfer(bytes, [bytes.buffer]));
+export function openCatalog(file: File) {
+  return catalog().open(file);
 }
 
-/** Run a SQL query through the worker. Call after initDatabase(). */
-export async function query<T = Record<string, unknown>>(sql: string, params?: unknown[]) {
-  const p = getProxy();
-  return p.query(sql, params) as Promise<T[]>;
+/** Raw SQL, for the dev-only debug page. */
+export function query<T = Record<string, unknown>>(sql: string, params?: Param[]) {
+  return catalog().query(sql, params) as Promise<T[]>;
 }

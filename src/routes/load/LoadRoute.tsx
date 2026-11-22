@@ -1,8 +1,15 @@
 import React from 'react';
-import { initDatabase } from '@/lib/dbClient';
+import { openCatalog } from '@/lib/dbClient';
+import type { CatalogErrorCode } from '@/catalog/validate.ts';
 import { useNavigate } from '@tanstack/react-router';
 
 const MAX_WARN_BYTES = 500 * 1024 * 1024; // 500MB
+
+const OPEN_ERROR_TEXT: Record<CatalogErrorCode, string> = {
+  'not-sqlite': 'This file isn’t a Lightroom catalog (it isn’t a SQLite database).',
+  'not-lightroom': 'This is a database, but not a Lightroom Classic catalog.',
+  'open-failed': 'The catalog couldn’t be opened. It may be damaged or too large for this browser.',
+};
 
 function isAllowed(file: File) {
   const name = file.name.toLowerCase();
@@ -36,18 +43,19 @@ function Load() {
   }
 
   async function proceedInit(f: File) {
+    setStatus('init');
     try {
-      setStatus('init');
-      // Read as ArrayBuffer then wrap as Uint8Array
-      const ab = await f.arrayBuffer();
-      const bytes = new Uint8Array(ab);
-      // Transfer ownership (zero-copy)
-      await initDatabase(bytes);
-      // quick smoke: SELECT 1 already ran in worker.init; continue
-      nav({ to: '/stats' });
+      const res = await openCatalog(f);
+      if (res.ok) {
+        nav({ to: '/stats' });
+        return;
+      }
+      setStatus('error');
+      setError(OPEN_ERROR_TEXT[res.error.code]);
+      console.error(res.error);
     } catch (e: unknown) {
       setStatus('error');
-      setError('Could not initialize catalog. Please try again.');
+      setError(OPEN_ERROR_TEXT['open-failed']);
       console.error(e);
     }
   }
@@ -118,9 +126,7 @@ function Load() {
       {status === 'error' && (
         <div className="mt-4 rounded-xl border border-danger-line p-4 bg-danger-bg">
           <div className="font-medium">Couldn’t load that file</div>
-          <p className="text-sm mt-1">
-            {error} Ensure the file is a Lightroom catalog (.lrcat/.db).
-          </p>
+          <p className="text-sm mt-1">{error}</p>
         </div>
       )}
     </div>

@@ -1,31 +1,70 @@
 import React from 'react';
-import { query } from '@/lib/dbClient';
+import { Link } from '@tanstack/react-router';
+import { catalog } from '@/lib/dbClient';
+import type { Summary } from '@/catalog/queries.ts';
 
+// Phase 1: plain summary from the tested query layer. Charts arrive in Phase 2.
 function StatsRoute() {
-  const [ok, setOk] = React.useState<unknown>(null);
-  const [err, setErr] = React.useState<string>('');
+  const [summary, setSummary] = React.useState<Summary | null>(null);
+  const [state, setState] = React.useState<'loading' | 'ready' | 'none'>('loading');
 
   React.useEffect(() => {
+    let cancelled = false;
     (async () => {
-      try {
-        const rows = await query<{ ok: number }>('SELECT 1 AS ok');
-        setOk(rows[0]?.ok);
-      } catch (e: unknown) {
-        setErr('Query failed');
-        console.error(e);
+      const api = catalog();
+      if (!(await api.isOpen())) {
+        if (!cancelled) setState('none');
+        return;
       }
-    })();
+      const s = await api.summary();
+      if (!cancelled) {
+        setSummary(s);
+        setState('ready');
+      }
+    })().catch((e: unknown) => {
+      console.error(e);
+      if (!cancelled) setState('none');
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  const rows: [string, string | number][] = summary
+    ? [
+        ['Photos', summary.photos],
+        ['Videos', summary.videos],
+        ['Virtual copies (not counted)', summary.virtualCopies],
+        ['Without a capture date', summary.undated],
+        ['First month', summary.firstMonth ?? '—'],
+        ['Last month', summary.lastMonth ?? '—'],
+        ['Cameras', summary.cameras],
+        ['Lenses', summary.lenses],
+      ]
+    : [];
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-semibold mb-4">Stats</h1>
-      {err ? (
-        <div className="text-danger-fg">{err}</div>
-      ) : (
-        <pre className="text-sm">Smoke test: {JSON.stringify({ ok })}</pre>
+      <h1 className="mb-4 text-2xl font-semibold">Stats</h1>
+      {state === 'loading' && <p className="text-muted">Loading…</p>}
+      {state === 'none' && (
+        <p className="text-muted">
+          No catalog is open.{' '}
+          <Link to="/load" className="text-accent underline">
+            Load a catalog
+          </Link>
+        </p>
       )}
-      {/* Later: charts */}
+      {state === 'ready' && (
+        <dl className="grid max-w-sm grid-cols-[1fr_auto] gap-x-6 gap-y-1 text-sm">
+          {rows.map(([k, v]) => (
+            <React.Fragment key={k}>
+              <dt className="text-muted">{k}</dt>
+              <dd className="text-right font-mono tabular-nums">{v}</dd>
+            </React.Fragment>
+          ))}
+        </dl>
+      )}
     </div>
   );
 }

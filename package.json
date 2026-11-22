@@ -19,7 +19,9 @@
     "format:check": "prettier --check .",
     "check": "npm run lint && npm run format:check",
     "verify": "npm run lint:strict && npm run format:check && npm run test && npm run build",
-    "prepare": "husky"
+    "prepare": "husky",
+    "inspect": "node scripts/inspect.ts",
+    "fixture": "node scripts/make-fixture.ts"
   },
   "dependencies": {
     "@tanstack/react-router": "^1.170.46",
