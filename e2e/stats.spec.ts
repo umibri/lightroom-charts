@@ -93,3 +93,17 @@ test('captures chart screenshots for review', async ({ page }, info) => {
     await card.screenshot({ path: info.outputPath(`${name.replace(/\s+/g, '-')}.png`) });
   }
 });
+
+test('EXIF keyed by file id is detected: cameras are named, not [Unknown]', async ({ page }) => {
+  await load(page, FIXTURES.fileKeyed);
+  await expect(page).toHaveURL(/#\/stats/);
+  const cameras = page.locator('section', { has: page.getByRole('heading', { name: 'Cameras' }) });
+  await expect(cameras.getByRole('img')).toHaveAttribute('aria-label', /X-T5|ILCE-7M4|iPhone/);
+  await expect(page.getByText('of photos have no camera or lens data')).toHaveCount(0);
+});
+
+test('a catalog where most photos lack EXIF shows a warning', async ({ page }) => {
+  await load(page, FIXTURES.noExif);
+  await expect(page).toHaveURL(/#\/stats/);
+  await expect(page.getByRole('alert')).toContainText('75% of photos have no camera or lens data');
+});

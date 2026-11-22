@@ -15,6 +15,7 @@ import {
 } from '@/catalog/queries.ts';
 import type { Month, MonthRange } from '@/catalog/transforms.ts';
 import { buildCatalog, demoPhotos } from '@/catalog/fixtures.ts';
+import { detectExifLink, diagnose, type Health } from '@/catalog/diagnose.ts';
 
 let SQL: SqlJsStatic | null = null;
 let raw: Database | null = null;
@@ -47,6 +48,8 @@ export interface OpenResult {
   /** Built-in sample data, not the user's catalog. */
   demo: boolean;
   summary: Summary;
+  /** Join/date sanity checks; the Stats page warns when they look wrong. */
+  health: Health;
 }
 
 /** Errors crossing the worker boundary lose their class; send a plain shape instead. */
@@ -75,6 +78,13 @@ function openBytes(SQL: SqlJsStatic, bytes: Uint8Array) {
   db = fromSqlJs(raw);
 }
 
+/** Pick the EXIF join that matches this catalog, then measure data quality. */
+function prepare(): Health {
+  const link = detectExifLink(db!);
+  db!.exifLink = link;
+  return diagnose(db!, link);
+}
+
 const api = {
   /**
    * Open a catalog from the File handle itself. Reading happens here, off the
@@ -97,10 +107,11 @@ const api = {
       openBytes(await engine(), bytes);
       onStage?.('checking');
       assertLightroom(db!);
+      const health = prepare();
       const summary = getSummary(db!);
       return {
         ok: true,
-        value: { fileName: file.name, sizeBytes: file.size, wal, demo: false, summary },
+        value: { fileName: file.name, sizeBytes: file.size, wal, demo: false, summary, health },
       };
     } catch (e) {
       return fail(e);
@@ -120,6 +131,7 @@ const api = {
       const bytes = demo.export();
       demo.close();
       openBytes(SQL, bytes);
+      const health = prepare();
       const summary = getSummary(db!);
       return {
         ok: true,
@@ -129,6 +141,7 @@ const api = {
           wal: false,
           demo: true,
           summary,
+          health,
         },
       };
     } catch (e) {

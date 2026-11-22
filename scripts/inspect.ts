@@ -18,6 +18,7 @@ import {
   getTopLenses,
 } from '../src/catalog/queries.ts';
 import { isMonth, type MonthRange } from '../src/catalog/transforms.ts';
+import { detectExifLink, diagnose, healthWarnings } from '../src/catalog/diagnose.ts';
 
 function arg(name: string): string | null {
   const i = process.argv.indexOf(name);
@@ -48,6 +49,8 @@ const SQL = await initSqlJs({ useOldExtensionFunctions: false });
 const raw = new SQL.Database(bytes);
 const db = fromSqlJs(raw);
 assertLightroom(db);
+db.exifLink = detectExifLink(db);
+const health = diagnose(db, db.exifLink);
 const opened = performance.now();
 
 const s = getSummary(db);
@@ -57,6 +60,23 @@ console.log(
   `  opened in ${(opened - t0).toFixed(0)} ms, process memory ${mb(process.memoryUsage().rss)} (RSS)\n`
 );
 console.table(s);
+
+const pct = (n: number) => (health.photos ? `${((n / health.photos) * 100).toFixed(1)}%` : '—');
+console.log('Health (schema assumptions checked against this catalog):');
+console.log(`  EXIF rows joined via Adobe_images.${health.exifLink}`);
+console.log(`  photos with EXIF   ${health.withExif} / ${health.photos} (${pct(health.withExif)})`);
+console.log(`  undated photos     ${health.undated} (${pct(health.undated)})`);
+console.log(
+  `  captureTime sample ${health.captureTimeSamples.map((t) => JSON.stringify(t)).join(', ') || '(none)'}`
+);
+const warnings = healthWarnings(health);
+if (warnings.length) {
+  console.log('\n  ⚠ Over half the photos look wrong; the app will show a warning.');
+  console.log(
+    '    Please share this Health block so the queries can be fixed. It has no file names or paths, only counts and three capture timestamps.'
+  );
+}
+console.log('');
 
 const range: MonthRange = { from: from ?? s.firstMonth, to: to ?? s.lastMonth };
 console.log(`Range: ${range.from ?? '…'} → ${range.to ?? '…'}`);

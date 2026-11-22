@@ -34,6 +34,19 @@ export default async function globalSetup() {
 
   writeFileSync(FIXTURES.notDb, 'definitely not a database '.repeat(20));
   writeFileSync(FIXTURES.text, 'shopping list');
+
+  // Schema variants: EXIF keyed by file id (detected and handled), and a
+  // catalog where most photos lack EXIF (should warn, not silently chart).
+  const last = { year: now.getFullYear(), month: now.getMonth() + 1 };
+  const keyed = buildCatalog(SQL, demoPhotos(200, last), { exifKeyedBy: 'file' });
+  writeFileSync(FIXTURES.fileKeyed, keyed.export());
+  keyed.close();
+  const bare = buildCatalog(
+    SQL,
+    demoPhotos(100, last).map((p, i) => ({ ...p, noExif: i % 4 !== 0 }))
+  );
+  writeFileSync(FIXTURES.noExif, bare.export());
+  bare.close();
   const other = new SQL.Database();
   other.run('CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT)');
   writeFileSync(FIXTURES.otherDb, other.export());

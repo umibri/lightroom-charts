@@ -15,10 +15,13 @@ export const UNKNOWN = '[Unknown]';
 // - One EXIF row per photo (lowest id), so a photo is never counted twice.
 // - Month = first 7 chars of captureTime ('YYYY-MM'); rows without a valid
 //   date only appear in the summary's `undated` count.
-const PHOTOS = `Adobe_images AS i
+function photos(db: Db): string {
+  const link = db.exifLink ?? 'id_local';
+  return `Adobe_images AS i
   LEFT JOIN (SELECT image, MIN(id_local) AS id FROM AgHarvestedExifMetadata GROUP BY image) AS one
-    ON one.image = i.id_local
+    ON one.image = i.${link}
   LEFT JOIN AgHarvestedExifMetadata AS exif ON exif.id_local = one.id`;
+}
 const MONTH = `substr(i.captureTime, 1, 7)`;
 const DATED = `i.captureTime GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]*'`;
 const ORIGINALS = `i.masterImage IS NULL`;
@@ -61,7 +64,7 @@ export function getSummary(db: Db): Summary {
        MAX(CASE WHEN ${DATED} THEN ${MONTH} END) AS lastMonth,
        COUNT(DISTINCT NULLIF(TRIM(cam.value), '')) AS cameras,
        COUNT(DISTINCT NULLIF(TRIM(lens.value), '')) AS lenses
-     FROM ${PHOTOS}
+     FROM ${photos(db)}
        LEFT JOIN AgInternedExifCameraModel AS cam ON cam.id_local = exif.cameraModelRef
        LEFT JOIN AgInternedExifLens AS lens ON lens.id_local = exif.lensRef
      WHERE ${ORIGINALS}`
@@ -106,7 +109,7 @@ function topBy(
   const w = where(range);
   return db.all<NameCount>(
     `SELECT COALESCE(NULLIF(TRIM(t.value), ''), '${UNKNOWN}') AS name, COUNT(*) AS count
-     FROM ${PHOTOS} LEFT JOIN ${table} AS t ON t.id_local = exif.${ref}
+     FROM ${photos(db)} LEFT JOIN ${table} AS t ON t.id_local = exif.${ref}
      ${w.sql}
      GROUP BY 1 ORDER BY count DESC, name = '${UNKNOWN}', name ASC LIMIT ?`,
     [...w.params, limit]
@@ -132,7 +135,7 @@ export interface IsoHistogram {
 export function getIsoHistogram(db: Db, range: MonthRange | null): IsoHistogram {
   const w = where(range);
   const rows = db.all<{ iso: number | null; count: number }>(
-    `SELECT exif.isoSpeedRating AS iso, COUNT(*) AS count FROM ${PHOTOS} ${w.sql} GROUP BY 1`,
+    `SELECT exif.isoSpeedRating AS iso, COUNT(*) AS count FROM ${photos(db)} ${w.sql} GROUP BY 1`,
     w.params
   );
   const bins = ISO_BINS.map((b) => ({ label: b.label, count: 0 }));

@@ -47,6 +47,7 @@ The rules live in `src/catalog/` and are covered by tests against synthetic cata
 - **Photos without a capture date** are counted in the summary but not in timelines or date-filtered views.
 - **Missing or blank camera/lens/ISO** is shown as `[Unknown]`, which sorts after named values on ties.
 - **One EXIF row per photo**, so a photo is never counted twice.
+- **Schema checks on open.** Lightroom's catalog format is undocumented. The app detects whether EXIF rows point at the image id or the file id, and warns if over half the photos have no matching camera/lens data or no readable capture date, instead of silently charting `[Unknown]`. `npm run inspect` prints the same checks as a "Health" block.
 
 To check against your own catalog, close Lightroom and run `npm run inspect -- path/to/catalog.lrcat`, then compare with Lightroom's Library filter bar (Metadata → Capture Date / Camera / Lens).
 

@@ -17,6 +17,7 @@ import {
 import DateFilter from './DateFilter';
 import DataTable from '@/charts/DataTable';
 import SummaryTiles from './SummaryTiles';
+import { healthWarnings } from '@/catalog/diagnose.ts';
 
 const WIDE = '(min-width: 640px)';
 function useWide(): boolean {
@@ -132,6 +133,32 @@ export default function StatsRoute() {
       </div>
 
       <SummaryTiles summary={summary} />
+
+      {healthWarnings(open.health).map((w) => (
+        <p
+          key={w.kind}
+          role="alert"
+          className="rounded-xl border border-warn-line bg-warn-bg p-3 text-sm"
+        >
+          <span className="font-medium">
+            {Math.round(w.share * 100)}%{' '}
+            {w.kind === 'exif'
+              ? 'of photos have no camera or lens data we could match.'
+              : 'of photos have a capture date we couldn’t read.'}
+          </span>{' '}
+          {w.kind === 'exif'
+            ? 'Camera, lens and ISO charts may be mostly [Unknown].'
+            : 'They’re left out of the timeline and date filters.'}{' '}
+          This catalog may use a layout the app doesn’t handle yet. Please{' '}
+          <a
+            href="https://github.com/umibri/lightroom-charts/issues"
+            className="underline underline-offset-2"
+          >
+            report it on GitHub
+          </a>
+          .
+        </p>
+      ))}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
         <span className="text-sm text-muted">Charts below use this date range</span>

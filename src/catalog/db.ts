@@ -6,8 +6,13 @@ import type { Database } from 'sql.js';
 export type Row = Record<string, unknown>;
 export type Param = string | number | null;
 
+/** Which Adobe_images column AgHarvestedExifMetadata.image refers to. */
+export type ExifLink = 'id_local' | 'rootFile';
+
 export interface Db {
   all<T = Row>(sql: string, params?: Param[]): T[];
+  /** Set after detection at open time; queries default to 'id_local'. */
+  exifLink?: ExifLink;
 }
 
 /** Wrap a sql.js Database. */
