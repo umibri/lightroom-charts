@@ -3,3 +3,6 @@ dist
 build
 .vite
 coverage
+scratch
+package-lock.json
+.claude

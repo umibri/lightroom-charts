@@ -1,5 +1,5 @@
 import React from 'react';
-import { initDatabase } from '@lib/dbClient';
+import { initDatabase } from '@/lib/dbClient';
 import { useNavigate } from '@tanstack/react-router';
 
 const MAX_WARN_BYTES = 500 * 1024 * 1024; // 500MB
@@ -45,8 +45,7 @@ function Load() {
       await initDatabase(bytes);
       // quick smoke: SELECT 1 already ran in worker.init; continue
       nav({ to: '/stats' });
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    } catch (e: any) {
+    } catch (e: unknown) {
       setStatus('error');
       setError('Could not initialize catalog. Please try again.');
       console.error(e);
@@ -57,7 +56,7 @@ function Load() {
     <div className="mx-auto max-w-xl p-6">
       <h1 className="text-2xl font-semibold mb-4">Load Catalog</h1>
 
-      <label className="block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer hover:neutral-700">
+      <label className="block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer hover:bg-neutral-50">
         <input
           type="file"
           accept=".lrcat,.db,application/octet-stream,application/x-sqlite3"
