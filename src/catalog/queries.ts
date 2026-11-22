@@ -15,16 +15,27 @@ export const UNKNOWN = '[Unknown]';
 // - One EXIF row per photo (lowest id), so a photo is never counted twice.
 // - Month = first 7 chars of captureTime ('YYYY-MM'); rows without a valid
 //   date only appear in the summary's `undated` count.
-const PHOTOS = `Adobe_images AS i
+function photos(db: Db): string {
+  const link = db.exifLink ?? 'id_local';
+  return `Adobe_images AS i
   LEFT JOIN (SELECT image, MIN(id_local) AS id FROM AgHarvestedExifMetadata GROUP BY image) AS one
-    ON one.image = i.id_local
+    ON one.image = i.${link}
   LEFT JOIN AgHarvestedExifMetadata AS exif ON exif.id_local = one.id`;
+}
 const MONTH = `substr(i.captureTime, 1, 7)`;
 const DATED = `i.captureTime GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]*'`;
 const ORIGINALS = `i.masterImage IS NULL`;
 
-function where(range: MonthRange | null): { sql: string; params: Param[] } {
+// Lightroom records no camera/lens/ISO for videos, so gear and exposure
+// charts count stills only (videos would all land in [Unknown]).
+const STILLS = `COALESCE(i.fileFormat, '') <> 'VIDEO'`;
+
+function where(
+  range: MonthRange | null,
+  { stillsOnly = false } = {}
+): { sql: string; params: Param[] } {
   const parts = [ORIGINALS];
+  if (stillsOnly) parts.push(STILLS);
   const params: Param[] = [];
   if (range) {
     parts.push(DATED);
@@ -61,7 +72,7 @@ export function getSummary(db: Db): Summary {
        MAX(CASE WHEN ${DATED} THEN ${MONTH} END) AS lastMonth,
        COUNT(DISTINCT NULLIF(TRIM(cam.value), '')) AS cameras,
        COUNT(DISTINCT NULLIF(TRIM(lens.value), '')) AS lenses
-     FROM ${PHOTOS}
+     FROM ${photos(db)}
        LEFT JOIN AgInternedExifCameraModel AS cam ON cam.id_local = exif.cameraModelRef
        LEFT JOIN AgInternedExifLens AS lens ON lens.id_local = exif.lensRef
      WHERE ${ORIGINALS}`
@@ -103,22 +114,32 @@ function topBy(
   range: MonthRange | null,
   limit: number
 ): NameCount[] {
-  const w = where(range);
+  const w = where(range, { stillsOnly: true });
   return db.all<NameCount>(
     `SELECT COALESCE(NULLIF(TRIM(t.value), ''), '${UNKNOWN}') AS name, COUNT(*) AS count
-     FROM ${PHOTOS} LEFT JOIN ${table} AS t ON t.id_local = exif.${ref}
+     FROM ${photos(db)} LEFT JOIN ${table} AS t ON t.id_local = exif.${ref}
      ${w.sql}
      GROUP BY 1 ORDER BY count DESC, name = '${UNKNOWN}', name ASC LIMIT ?`,
     [...w.params, limit]
   );
 }
 
-/** Top cameras by photo count. Missing/blank camera is bucketed as [Unknown]. */
+/** Videos in the range: left out of camera, lens and ISO charts. */
+export function getVideoCount(db: Db, range: MonthRange | null): number {
+  const w = where(range);
+  const [row] = db.all<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM Adobe_images AS i ${w.sql} AND i.fileFormat = 'VIDEO'`,
+    w.params
+  );
+  return row.n;
+}
+
+/** Top cameras by photo count (stills only). Missing/blank camera is bucketed as [Unknown]. */
 export function getTopCameras(db: Db, range: MonthRange | null, limit = 15): NameCount[] {
   return topBy(db, 'AgInternedExifCameraModel', 'cameraModelRef', range, limit);
 }
 
-/** Top lenses by photo count. Missing/blank lens is bucketed as [Unknown]. */
+/** Top lenses by photo count (stills only). Missing/blank lens is bucketed as [Unknown]. */
 export function getTopLenses(db: Db, range: MonthRange | null, limit = 15): NameCount[] {
   return topBy(db, 'AgInternedExifLens', 'lensRef', range, limit);
 }
@@ -128,11 +149,11 @@ export interface IsoHistogram {
   unknown: number;
 }
 
-/** Photos per full-stop ISO bin; photos without a positive ISO count as unknown. */
+/** Stills per full-stop ISO bin; photos without a positive ISO count as unknown. */
 export function getIsoHistogram(db: Db, range: MonthRange | null): IsoHistogram {
-  const w = where(range);
+  const w = where(range, { stillsOnly: true });
   const rows = db.all<{ iso: number | null; count: number }>(
-    `SELECT exif.isoSpeedRating AS iso, COUNT(*) AS count FROM ${PHOTOS} ${w.sql} GROUP BY 1`,
+    `SELECT exif.isoSpeedRating AS iso, COUNT(*) AS count FROM ${photos(db)} ${w.sql} GROUP BY 1`,
     w.params
   );
   const bins = ISO_BINS.map((b) => ({ label: b.label, count: 0 }));

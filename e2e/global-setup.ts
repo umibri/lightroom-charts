@@ -21,12 +21,13 @@ export default async function globalSetup() {
   const db = fromSqlJs(raw);
   const s = getSummary(db);
   const today = monthOf(now);
+  const extent = { first: s.firstMonth!, last: s.lastMonth! };
   const total = (r: { from: string; to: string } | null) =>
     r ? getTimeline(db, r).reduce((n, x) => n + x.count, 0) : 0;
   const expected: Expected = {
     photos: s.photos,
-    m12: total(presetRange('12m', today, null)),
-    m24: total(presetRange('24m', today, null)),
+    m12: total(presetRange('12m', today, extent)),
+    m24: total(presetRange('24m', today, extent)),
     all: total({ from: s.firstMonth!, to: s.lastMonth! }),
   };
   writeFileSync(FIXTURES.expected, JSON.stringify(expected));
@@ -34,6 +35,19 @@ export default async function globalSetup() {
 
   writeFileSync(FIXTURES.notDb, 'definitely not a database '.repeat(20));
   writeFileSync(FIXTURES.text, 'shopping list');
+
+  // Schema variants: EXIF keyed by file id (detected and handled), and a
+  // catalog where most photos lack EXIF (should warn, not silently chart).
+  const last = { year: now.getFullYear(), month: now.getMonth() + 1 };
+  const keyed = buildCatalog(SQL, demoPhotos(200, last), { exifKeyedBy: 'file' });
+  writeFileSync(FIXTURES.fileKeyed, keyed.export());
+  keyed.close();
+  const bare = buildCatalog(
+    SQL,
+    demoPhotos(100, last).map((p, i) => ({ ...p, noExif: i % 4 !== 0 }))
+  );
+  writeFileSync(FIXTURES.noExif, bare.export());
+  bare.close();
   const other = new SQL.Database();
   other.run('CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT)');
   writeFileSync(FIXTURES.otherDb, other.export());

@@ -18,13 +18,27 @@ export interface FixturePhoto {
   noExif?: boolean;
 }
 
-export function buildCatalog(SQL: SqlJsStatic, photos: FixturePhoto[]): Database {
+export interface FixtureOptions {
+  /**
+   * Which id AgHarvestedExifMetadata.image holds. Lightroom uses the image id
+   * (Adobe_images.id_local); 'file' simulates the AgLibraryFile.id_local
+   * variant one community schema note describes, so detection can be tested.
+   */
+  exifKeyedBy?: 'image' | 'file';
+}
+
+export function buildCatalog(
+  SQL: SqlJsStatic,
+  photos: FixturePhoto[],
+  options: FixtureOptions = {}
+): Database {
   const db = new SQL.Database();
   db.run(`
     CREATE TABLE Adobe_images (
       id_local INTEGER PRIMARY KEY, id_global TEXT, captureTime TEXT,
-      fileFormat TEXT, masterImage INTEGER, rating INTEGER, pick INTEGER
+      fileFormat TEXT, masterImage INTEGER, rating INTEGER, pick INTEGER, rootFile INTEGER
     );
+    CREATE TABLE AgLibraryFile (id_local INTEGER PRIMARY KEY, baseName TEXT, extension TEXT);
     CREATE TABLE AgHarvestedExifMetadata (
       id_local INTEGER PRIMARY KEY, image INTEGER, cameraModelRef INTEGER,
       lensRef INTEGER, isoSpeedRating NUMBER, aperture NUMBER, shutterSpeed NUMBER,
@@ -55,19 +69,31 @@ export function buildCatalog(SQL: SqlJsStatic, photos: FixturePhoto[]): Database
 
   // Lightroom ids are not dense; offset them so tests can't rely on id == index.
   const idOf = (index: number) => 1000 + index * 3;
+  // File ids deliberately differ from image ids, as in real catalogs.
+  const fileIdOf = (index: number) => 50_000 + index * 7;
   let exifId = 1;
 
   photos.forEach((p, index) => {
     const id = idOf(index);
     db.run(
-      `INSERT INTO Adobe_images (id_local, captureTime, fileFormat, masterImage) VALUES (?, ?, ?, ?)`,
+      `INSERT INTO Adobe_images (id_local, captureTime, fileFormat, masterImage, rootFile)
+       VALUES (?, ?, ?, ?, ?)`,
       [
         id,
         p.captureTime ?? null,
         p.video ? 'VIDEO' : 'RAW',
         p.virtualOf === undefined ? null : idOf(p.virtualOf),
+        // A virtual copy shares its master's file.
+        fileIdOf(p.virtualOf ?? index),
       ]
     );
+    if (p.virtualOf === undefined) {
+      db.run(`INSERT INTO AgLibraryFile (id_local, baseName, extension) VALUES (?, ?, ?)`, [
+        fileIdOf(index),
+        `IMG_${index}`,
+        p.video ? 'MP4' : 'RAF',
+      ]);
+    }
     if (p.noExif) return;
     const cam = interned('AgInternedExifCameraModel', cams, p.camera);
     const lens = interned('AgInternedExifLens', lenses, p.lens);
@@ -75,7 +101,7 @@ export function buildCatalog(SQL: SqlJsStatic, photos: FixturePhoto[]): Database
       db.run(
         `INSERT INTO AgHarvestedExifMetadata (id_local, image, cameraModelRef, lensRef, isoSpeedRating)
          VALUES (?, ?, ?, ?, ?)`,
-        [exifId++, id, cam, lens, p.iso ?? null]
+        [exifId++, options.exifKeyedBy === 'file' ? fileIdOf(index) : id, cam, lens, p.iso ?? null]
       );
     }
   });

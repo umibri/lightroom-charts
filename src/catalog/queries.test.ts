@@ -8,6 +8,7 @@ import {
   getTimeline,
   getTopCameras,
   getTopLenses,
+  getVideoCount,
   UNKNOWN,
 } from './queries.ts';
 
@@ -83,15 +84,16 @@ describe('getTimeline', () => {
 
 describe('top cameras / lenses', () => {
   it('buckets missing/blank as [Unknown]; sorts by count, [Unknown] last on ties, then name', () => {
+    // Stills only: the video (row 9, A7IV/FE35) is excluded.
     expect(getTopCameras(open(EDGE), null)).toEqual([
       { name: 'X-T5', count: 4 },
-      { name: 'A7IV', count: 3 },
-      { name: UNKNOWN, count: 2 }, // blank camera + no EXIF row
+      { name: 'A7IV', count: 2 },
+      { name: UNKNOWN, count: 2 }, // blank camera + no EXIF row; loses the tie
     ]);
     expect(getTopLenses(open(EDGE), null)).toEqual([
       { name: 'XF23', count: 3 },
       { name: UNKNOWN, count: 3 }, // '' + null + no EXIF row; loses the tie
-      { name: 'FE35', count: 2 },
+      { name: 'FE35', count: 1 },
       { name: 'XF56', count: 1 },
     ]);
   });
@@ -117,13 +119,21 @@ describe('top cameras / lenses', () => {
   });
 });
 
+describe('getVideoCount', () => {
+  it('counts videos (originals only) within the range', () => {
+    expect(getVideoCount(open(EDGE), null)).toBe(1);
+    expect(getVideoCount(open(EDGE), { from: '2025-01', to: '2025-01' })).toBe(1);
+    expect(getVideoCount(open(EDGE), { from: '2025-03', to: null })).toBe(0);
+  });
+});
+
 describe('getIsoHistogram', () => {
   it('bins by full stop and counts missing/zero ISO as unknown', () => {
     const h = getIsoHistogram(open(EDGE), null);
     const byLabel = Object.fromEntries(h.bins.map((b) => [b.label, b.count]));
     expect(byLabel).toMatchObject({ '≤100': 2, '200': 1, '400': 1, '800': 1, '6400': 1 });
-    expect(h.unknown).toBe(3); // null ISO, ISO 0, no EXIF row
-    expect(h.bins.reduce((s, b) => s + b.count, 0) + h.unknown).toBe(9);
+    expect(h.unknown).toBe(2); // null ISO + no EXIF row (the ISO-0 video is excluded)
+    expect(h.bins.reduce((s, b) => s + b.count, 0) + h.unknown).toBe(8); // 9 originals - 1 video
   });
 });
 
@@ -138,7 +148,9 @@ describe('consistency on a larger catalog', () => {
     const isoTotal = iso.bins.reduce((n, b) => n + b.count, 0) + iso.unknown;
     expect(s.photos).toBe(2000);
     expect(timelineTotal).toBe(s.photos - s.undated);
-    expect(cams).toBe(s.photos);
-    expect(isoTotal).toBe(s.photos);
+    // Gear and ISO charts count stills only.
+    expect(cams).toBe(s.photos - s.videos);
+    expect(isoTotal).toBe(s.photos - s.videos);
+    expect(getVideoCount(db, null)).toBe(s.videos);
   });
 });

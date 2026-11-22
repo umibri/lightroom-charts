@@ -33,7 +33,7 @@ UI (React)  ──Comlink──▶  Web Worker  ──▶  sql.js (WASM SQLite, 
 
 - Photos per month for the selected range (empty months shown as zero)
 - Top 15 lenses and cameras, and an ISO histogram by full stop
-- Date range: 12 months, 24 months (default), all time, or a custom month range; kept in the URL so back/forward and refresh-after-load keep your view
+- Date range: last 12 or 24 months of the catalog (default 24; ending at your latest photo if that's before today), all time, or a custom month range; kept in the URL so back/forward and refresh-after-load keep your view
 - "Show data" under every chart lists the exact numbers (also read by screen readers)
 - No catalog handy? **Try with sample data** generates a demo catalog in the browser (works offline) and marks the page **Demo data**
 
@@ -42,11 +42,12 @@ UI (React)  ──Comlink──▶  Web Worker  ──▶  sql.js (WASM SQLite, 
 The rules live in `src/catalog/` and are covered by tests against synthetic catalogs.
 
 - **Virtual copies are excluded.** They are the same photo (`Adobe_images.masterImage` is set).
-- **Videos are included** in totals and reported separately.
+- **Videos are included** in totals and the timeline, but left out of the camera, lens and ISO charts (Lightroom records no camera EXIF for them); those charts say how many were left out.
 - **Months come from the capture time as written** (`YYYY-MM` of `captureTime`). Lightroom stores local wall-clock time without a zone, so no timezone conversion is applied.
 - **Photos without a capture date** are counted in the summary but not in timelines or date-filtered views.
 - **Missing or blank camera/lens/ISO** is shown as `[Unknown]`, which sorts after named values on ties.
 - **One EXIF row per photo**, so a photo is never counted twice.
+- **Schema checks on open.** Lightroom's catalog format is undocumented. The app detects whether EXIF rows point at the image id or the file id, and warns if over half the photos have no matching camera/lens data or no readable capture date, instead of silently charting `[Unknown]`. `npm run inspect` prints the same checks as a "Health" block.
 
 To check against your own catalog, close Lightroom and run `npm run inspect -- path/to/catalog.lrcat`, then compare with Lightroom's Library filter bar (Metadata → Capture Date / Camera / Lens).
 

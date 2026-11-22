@@ -8,6 +8,8 @@ export const FIXTURES = {
   notDb: path.join(dir, 'renamed.lrcat'),
   otherDb: path.join(dir, 'other.db'),
   text: path.join(dir, 'notes.txt'),
+  fileKeyed: path.join(dir, 'file-keyed.lrcat'),
+  noExif: path.join(dir, 'no-exif.lrcat'),
   expected: path.join(dir, 'expected.json'),
 };
 

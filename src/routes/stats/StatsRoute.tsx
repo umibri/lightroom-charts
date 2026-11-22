@@ -17,6 +17,7 @@ import {
 import DateFilter from './DateFilter';
 import DataTable from '@/charts/DataTable';
 import SummaryTiles from './SummaryTiles';
+import { healthWarnings } from '@/catalog/diagnose.ts';
 
 const WIDE = '(min-width: 640px)';
 function useWide(): boolean {
@@ -89,6 +90,16 @@ export default function StatsRoute() {
     enabled,
   });
 
+  const videos = useQuery({
+    queryKey: ['videos', ...key],
+    queryFn: () => catalog().videoCount(range),
+    enabled,
+  });
+  // Shown on the gear/ISO charts, which count stills only.
+  const videoNote = videos.data ? `${videos.data.toLocaleString()} videos not included` : null;
+  const joinNotes = (...parts: (string | null | undefined)[]) =>
+    parts.filter(Boolean).join(' · ') || undefined;
+
   const total = timeline.data?.reduce((n, r) => n + r.count, 0);
   const empty = total === 0;
   const labelWidth = wide ? 200 : 110;
@@ -132,6 +143,32 @@ export default function StatsRoute() {
       </div>
 
       <SummaryTiles summary={summary} />
+
+      {healthWarnings(open.health).map((w) => (
+        <p
+          key={w.kind}
+          role="alert"
+          className="rounded-xl border border-warn-line bg-warn-bg p-3 text-sm"
+        >
+          <span className="font-medium">
+            {Math.round(w.share * 100)}%{' '}
+            {w.kind === 'exif'
+              ? 'of photos have no camera or lens data we could match.'
+              : 'of photos have a capture date we couldn’t read.'}
+          </span>{' '}
+          {w.kind === 'exif'
+            ? 'Camera, lens and ISO charts may be mostly [Unknown].'
+            : 'They’re left out of the timeline and date filters.'}{' '}
+          This catalog may use a layout the app doesn’t handle yet. Please{' '}
+          <a
+            href="https://github.com/umibri/lightroom-charts/issues"
+            className="underline underline-offset-2"
+          >
+            report it on GitHub
+          </a>
+          .
+        </p>
+      ))}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
         <span className="text-sm text-muted">Charts below use this date range</span>
@@ -183,7 +220,7 @@ export default function StatsRoute() {
             </Card>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
-              <Card title="Lenses" note="Top 15">
+              <Card title="Lenses" note={joinNotes('Top 15', videoNote)}>
                 {lensOpt && lenses.data ? (
                   <EChart
                     option={lensOpt}
@@ -201,7 +238,7 @@ export default function StatsRoute() {
                   />
                 )}
               </Card>
-              <Card title="Cameras" note="Top 15">
+              <Card title="Cameras" note={joinNotes('Top 15', videoNote)}>
                 {cameraOpt && cameras.data ? (
                   <EChart
                     option={cameraOpt}
@@ -221,9 +258,10 @@ export default function StatsRoute() {
               </Card>
               <Card
                 title="ISO"
-                note={
-                  iso.data?.unknown ? `${iso.data.unknown.toLocaleString()} unknown` : undefined
-                }
+                note={joinNotes(
+                  iso.data?.unknown ? `${iso.data.unknown.toLocaleString()} unknown` : null,
+                  videoNote
+                )}
               >
                 {isoOpt && iso.data ? (
                   <EChart
