@@ -10,8 +10,7 @@ function StatsRoute() {
       try {
         const rows = await query<{ ok: number }>('SELECT 1 AS ok');
         setOk(rows[0]?.ok);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      } catch (e: any) {
+      } catch (e: unknown) {
         setErr('Query failed');
         console.error(e);
       }

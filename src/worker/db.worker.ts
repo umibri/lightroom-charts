@@ -11,7 +11,7 @@ let db: Database | null = null;
 
 async function ensureSql() {
   if (!SQL) {
-    SQL = await initSqlJs({ locateFile: () => wasmUrl });
+    SQL = await initSqlJs({ locateFile: () => wasmUrl, useOldExtensionFunctions: false });
   }
 }
 

@@ -1,27 +1,29 @@
-import { defineConfig } from 'vite';
+import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import path from 'node:path';
 
 // https://vite.dev/config/
 export default defineConfig({
+  // GitHub Pages serves the app from /<repo>/; the deploy workflow sets BASE_PATH.
+  base: process.env.BASE_PATH ?? '/',
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, 'src'),
-      '@lib': path.resolve(__dirname, 'src/lib'),
-      '@router': path.resolve(__dirname, 'src/router'),
-      '@routes': path.resolve(__dirname, 'src/routes'),
-      '@worker': path.resolve(__dirname, 'src/worker'),
-    },
-  },
-  server: {
-    headers: {
-      'Cross-Origin-Opener-Policy': 'same-origin',
-      'Cross-Origin-Embedder-Policy': 'require-corp',
+      '@': path.resolve(import.meta.dirname, 'src'),
     },
   },
   optimizeDeps: {
-    exclude: ['@sqlite.org/sqlite-wasm'],
+    // sql.js is only imported from the worker, so Vite would otherwise discover it
+    // lazily on first load, re-optimize, and full-reload the page — wiping the
+    // catalog that was just opened in the worker.
+    include: ['sql.js'],
+  },
+  worker: {
+    format: 'es',
+  },
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
   },
 });

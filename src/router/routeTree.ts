@@ -1,18 +1,24 @@
-import { createRootRoute, createRoute } from '@tanstack/react-router';
-import Root from '@router/Root';
+import {
+  createRootRoute,
+  createRoute,
+  lazyRouteComponent,
+  redirect,
+  type AnyRoute,
+} from '@tanstack/react-router';
+import Root from '@/router/Root';
 import LoadRoute from '@/routes/load/LoadRoute';
 import StatsRoute from '@/routes/stats/StatsRoute';
 
-// Root layout (header + outlet)
 const rootRoute = createRootRoute({
   component: Root,
 });
 
-// Pages
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: LoadRoute, // default to /load for now
+  beforeLoad: () => {
+    throw redirect({ to: '/load' });
+  },
 });
 
 const loadRoute = createRoute({
@@ -27,5 +33,17 @@ const statsRoute = createRoute({
   component: StatsRoute,
 });
 
-// Build the route tree and router
-export const routeTree = rootRoute.addChildren([indexRoute, loadRoute, statsRoute]);
+// Dev-only schema explorer. The `if` is constant-folded away in production builds,
+// so neither the route nor its chunk ships.
+const devRoutes: AnyRoute[] = [];
+if (import.meta.env.DEV) {
+  devRoutes.push(
+    createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/debug',
+      component: lazyRouteComponent(() => import('@/routes/debug/SchemaDebug')),
+    })
+  );
+}
+
+export const routeTree = rootRoute.addChildren([indexRoute, loadRoute, statsRoute, ...devRoutes]);

@@ -8,14 +8,8 @@
     "types": ["vite/client"],
     "skipLibCheck": true,
 
-    /* Absolute paths - no leading ./ needed */
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"],
-      "@lib/*": ["src/lib/*"],
-      "@router/*": ["src/router/*"],
-      "@routes/*": ["src/routes/*"],
-      "@worker/*": ["src/worker/*"]
+      "@/*": ["./src/*"]
     },
 
     /* Bundler mode */
@@ -34,5 +28,6 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": ["src"]
+  "include": ["src"],
+  "exclude": ["src/**/*.test.ts"]
 }
