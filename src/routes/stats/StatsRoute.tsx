@@ -15,6 +15,7 @@ import {
   timelineOption,
 } from '@/charts/options.ts';
 import DateFilter from './DateFilter';
+import DataTable from '@/charts/DataTable';
 
 const WIDE = '(min-width: 640px)';
 function useWide(): boolean {
@@ -115,7 +116,14 @@ export default function StatsRoute() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-semibold">Stats</h1>
+          <h1 className="flex items-center gap-2 text-2xl font-semibold">
+            Stats
+            {open.demo && (
+              <span className="rounded-full border border-warn-line bg-warn-bg px-2 py-0.5 text-xs font-medium">
+                Demo data
+              </span>
+            )}
+          </h1>
           <p className="truncate text-sm text-muted" title={open.fileName}>
             {open.fileName} · {summary.photos.toLocaleString()} photos
           </p>
@@ -153,6 +161,13 @@ export default function StatsRoute() {
             ) : (
               <Status>Loading…</Status>
             )}
+            {timeline.data && (
+              <DataTable
+                caption={`Photos per month, ${rangeText}`}
+                columns={['Month', 'Photos']}
+                rows={timeline.data.map((r) => [monthLabel(r.month), r.count])}
+              />
+            )}
           </Card>
 
           {empty ? (
@@ -171,6 +186,13 @@ export default function StatsRoute() {
                 ) : (
                   <Status>Loading…</Status>
                 )}
+                {lenses.data && (
+                  <DataTable
+                    caption={`Top lenses, ${rangeText}`}
+                    columns={['Lens', 'Photos']}
+                    rows={lenses.data.map((r) => [r.name, r.count])}
+                  />
+                )}
               </Card>
               <Card title="Cameras" note="Top 15">
                 {cameraOpt && cameras.data ? (
@@ -181,6 +203,13 @@ export default function StatsRoute() {
                   />
                 ) : (
                   <Status>Loading…</Status>
+                )}
+                {cameras.data && (
+                  <DataTable
+                    caption={`Top cameras, ${rangeText}`}
+                    columns={['Camera', 'Photos']}
+                    rows={cameras.data.map((r) => [r.name, r.count])}
+                  />
                 )}
               </Card>
               <Card
@@ -197,6 +226,16 @@ export default function StatsRoute() {
                   />
                 ) : (
                   <Status>Loading…</Status>
+                )}
+                {iso.data && (
+                  <DataTable
+                    caption={`ISO, ${rangeText}`}
+                    columns={['ISO', 'Photos']}
+                    rows={[
+                      ...iso.data.bins.map((b): [string, number] => [b.label, b.count]),
+                      ['Unknown', iso.data.unknown],
+                    ]}
+                  />
                 )}
               </Card>
             </div>

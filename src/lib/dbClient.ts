@@ -1,5 +1,5 @@
 import * as Comlink from 'comlink';
-import type { WorkerAPI } from '@/worker/db.worker';
+import type { OpenStage, WorkerAPI } from '@/worker/db.worker';
 import type { Param } from '@/catalog/db.ts';
 
 let proxy: Comlink.Remote<WorkerAPI> | null = null;
@@ -20,8 +20,14 @@ export function catalog(): Comlink.Remote<WorkerAPI> {
  * Open a catalog. The File handle is structured-cloned (cheap; no bytes are
  * copied on the main thread) and read inside the worker.
  */
-export function openCatalog(file: File) {
-  return catalog().open(file);
+export function openCatalog(file: File, onStage?: (stage: OpenStage) => void) {
+  // Callbacks must be wrapped to cross the worker boundary.
+  return catalog().open(file, onStage ? Comlink.proxy(onStage) : undefined);
+}
+
+/** Open the built-in sample catalog (generated in the worker, works offline). */
+export function openDemoCatalog() {
+  return catalog().openDemo();
 }
 
 /** Raw SQL, for the dev-only debug page. */

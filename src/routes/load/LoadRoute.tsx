@@ -1,147 +1,245 @@
-import React from 'react';
-import { openCatalog } from '@/lib/dbClient';
-import type { CatalogErrorCode } from '@/catalog/validate.ts';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
+import { openCatalog, openDemoCatalog } from '@/lib/dbClient';
 import { setOpenCatalog } from '@/state/catalogStore';
 import { DEFAULT_RANGE } from '@/catalog/filters.ts';
+import type { OpenOutcome, OpenStage } from '@/worker/db.worker';
+import { ERROR_COPY, pickCatalog, type LoadErrorCode } from './pick.ts';
 
-const MAX_WARN_BYTES = 500 * 1024 * 1024; // 500MB
+type State =
+  | { kind: 'idle' }
+  | { kind: 'large'; file: File }
+  | { kind: 'opening'; name: string; stage: OpenStage | 'demo' }
+  | { kind: 'error'; code: LoadErrorCode; file: File | null; detail?: string };
 
-const OPEN_ERROR_TEXT: Record<CatalogErrorCode, string> = {
-  'not-sqlite': 'This file isn’t a Lightroom catalog (it isn’t a SQLite database).',
-  'not-lightroom': 'This is a database, but not a Lightroom Classic catalog.',
-  'open-failed': 'The catalog couldn’t be opened. It may be damaged or too large for this browser.',
-};
+const STAGES: { key: OpenStage; label: string }[] = [
+  { key: 'reading', label: 'Reading the file' },
+  { key: 'opening', label: 'Opening the database' },
+  { key: 'checking', label: 'Checking it’s a Lightroom catalog' },
+];
 
-function isAllowed(file: File) {
-  const name = file.name.toLowerCase();
-  return name.endsWith('.lrcat') || name.endsWith('.db');
-}
+const mb = (n: number) => `${Math.round(n / (1024 * 1024)).toLocaleString()} MB`;
 
-function Load() {
+export default function LoadRoute() {
   const nav = useNavigate();
   const { from } = useSearch({ from: '/load' });
-  const [fileName, setFileName] = React.useState<string>('');
-  const [status, setStatus] = React.useState<'idle' | 'warn' | 'init' | 'error'>('idle');
-  const [error, setError] = React.useState<string>('');
-  const [pendingFile, setPendingFile] = React.useState<File | null>(null);
+  const [state, setState] = useState<State>({ kind: 'idle' });
+  const [dragging, setDragging] = useState(false);
+  const input = useRef<HTMLInputElement>(null);
+  const busy = state.kind === 'opening';
 
-  async function handleFiles(files: FileList | null) {
-    setError('');
-    if (!files || files.length === 0) return;
-    const f = files[0];
-    if (!isAllowed(f)) {
-      setStatus('error');
-      setError('Please upload a Lightroom catalog (.lrcat or .db).');
+  // Dropping a file anywhere in the window would otherwise make the browser
+  // navigate to it, losing the app. Handle drops page-wide instead.
+  useEffect(() => {
+    let depth = 0;
+    const hasFiles = (e: DragEvent) => !!e.dataTransfer?.types.includes('Files');
+    const enter = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      depth++;
+      setDragging(true);
+    };
+    const leave = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      depth = Math.max(0, depth - 1);
+      if (depth === 0) setDragging(false);
+    };
+    const over = (e: DragEvent) => {
+      if (hasFiles(e)) e.preventDefault();
+    };
+    const drop = (e: DragEvent) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth = 0;
+      setDragging(false);
+      if (!busy) choose(e.dataTransfer?.files ?? null);
+    };
+    window.addEventListener('dragenter', enter);
+    window.addEventListener('dragleave', leave);
+    window.addEventListener('dragover', over);
+    window.addEventListener('drop', drop);
+    return () => {
+      window.removeEventListener('dragenter', enter);
+      window.removeEventListener('dragleave', leave);
+      window.removeEventListener('dragover', over);
+      window.removeEventListener('drop', drop);
+    };
+  });
+
+  function finish(res: OpenOutcome, file: File | null) {
+    if (res.ok) {
+      setOpenCatalog(res.value);
+      nav({ to: '/stats', search: { range: DEFAULT_RANGE } });
       return;
     }
-    setFileName(f.name);
-
-    if (f.size >= MAX_WARN_BYTES) {
-      setPendingFile(f);
-      setStatus('warn');
-      return;
-    }
-    await proceedInit(f);
+    setOpenCatalog(null);
+    console.error(res.error);
+    setState({ kind: 'error', code: res.error.code, file, detail: res.error.message });
   }
 
-  async function proceedInit(f: File) {
-    setStatus('init');
+  async function open(file: File) {
+    setState({ kind: 'opening', name: file.name, stage: 'reading' });
     try {
-      const res = await openCatalog(f);
-      if (res.ok) {
-        setOpenCatalog(res.value);
-        nav({ to: '/stats', search: { range: DEFAULT_RANGE } });
-        return;
-      }
-      setOpenCatalog(null);
-      setStatus('error');
-      setError(OPEN_ERROR_TEXT[res.error.code]);
-      console.error(res.error);
-    } catch (e: unknown) {
-      setStatus('error');
-      setError(OPEN_ERROR_TEXT['open-failed']);
+      const res = await openCatalog(file, (stage) =>
+        setState((s) => (s.kind === 'opening' ? { ...s, stage } : s))
+      );
+      finish(res, file);
+    } catch (e) {
       console.error(e);
+      setState({ kind: 'error', code: 'open-failed', file });
     }
+  }
+
+  async function openDemo() {
+    setState({ kind: 'opening', name: 'Demo catalog', stage: 'demo' });
+    try {
+      finish(await openDemoCatalog(), null);
+    } catch (e) {
+      console.error(e);
+      setState({ kind: 'error', code: 'open-failed', file: null });
+    }
+  }
+
+  function choose(files: FileList | null) {
+    const pick = pickCatalog(files);
+    if (input.current) input.current.value = ''; // allow choosing the same file again
+    if (pick.kind === 'none') return;
+    if (pick.kind === 'wrong-type') {
+      setState({ kind: 'error', code: 'wrong-type', file: null, detail: pick.name });
+      return;
+    }
+    if (pick.kind === 'large') {
+      setState({ kind: 'large', file: pick.file });
+      return;
+    }
+    void open(pick.file);
   }
 
   return (
-    <div className="mx-auto max-w-xl p-6">
-      <h1 className="text-2xl font-semibold mb-4">Load Catalog</h1>
-      {from === 'stats' && status === 'idle' && (
-        <p className="mb-4 rounded-xl border border-info-line bg-info-bg p-3 text-sm">
+    <div className="mx-auto max-w-xl space-y-4">
+      <div>
+        <h1 className="text-2xl font-semibold">Open a Lightroom catalog</h1>
+        <p className="mt-1 text-sm text-muted">
+          Your catalog is read inside this browser tab. Nothing is uploaded.
+        </p>
+      </div>
+
+      {from === 'stats' && state.kind === 'idle' && (
+        <p className="rounded-xl border border-info-line bg-info-bg p-3 text-sm">
           No catalog is open. Catalogs stay in this tab’s memory only, so after a reload you need to
-          load yours again.
+          open yours again.
         </p>
       )}
 
-      <label className="block border-2 border-dashed border-line-strong rounded-2xl p-6 text-center cursor-pointer hover:bg-surface">
+      <label
+        className={`block cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent ${
+          dragging ? 'border-accent bg-info-bg' : 'border-line-strong hover:bg-surface'
+        } ${busy ? 'pointer-events-none opacity-60' : ''}`}
+      >
         <input
+          ref={input}
           type="file"
-          accept=".lrcat,.db,application/octet-stream,application/x-sqlite3"
-          className="hidden"
-          onChange={(e) => handleFiles(e.target.files)}
+          accept=".lrcat,.db"
+          className="sr-only"
+          disabled={busy}
+          onChange={(e) => choose(e.target.files)}
         />
-        <div className="text-sm">
-          Drag & drop or click to choose a <strong>.lrcat</strong> / <strong>.db</strong>
-        </div>
-        {fileName && <div className="mt-2 text-xs text-muted">Selected: {fileName}</div>}
+        <span className="block font-medium">
+          {dragging ? 'Drop to open' : 'Drop your .lrcat here, or choose a file'}
+        </span>
+        <span className="mt-1 block text-sm text-muted">
+          Usually in Pictures › Lightroom. Close Lightroom first so recent changes are included.
+        </span>
       </label>
 
-      <div
-        className="mt-4 h-24 rounded-xl border border-line flex items-center justify-center text-sm text-muted"
-        onDragOver={(e) => {
-          e.preventDefault();
-        }}
-        onDrop={(e) => {
-          e.preventDefault();
-          handleFiles(e.dataTransfer.files);
-        }}
-      >
-        Or drop file here
-      </div>
+      {state.kind === 'opening' && (
+        <div role="status" className="rounded-xl border border-info-line bg-info-bg p-4 text-sm">
+          <div className="mb-2 truncate font-medium">Opening {state.name}…</div>
+          {state.stage === 'demo' ? (
+            <p className="text-muted">Generating sample photos…</p>
+          ) : (
+            <ol className="space-y-1">
+              {STAGES.map((s, i) => {
+                const at = STAGES.findIndex((x) => x.key === state.stage);
+                const mark = i < at ? '✓' : i === at ? '…' : '';
+                return (
+                  <li key={s.key} className={i > at ? 'text-muted' : ''}>
+                    <span className="inline-block w-4" aria-hidden>
+                      {mark}
+                    </span>
+                    {s.label}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+      )}
 
-      {status === 'warn' && pendingFile && (
-        <div className="mt-4 rounded-xl border border-warn-line p-4 bg-warn-bg">
-          <div className="font-medium">Large file detected</div>
-          <p className="text-sm mt-1">
-            This file is {Math.round(pendingFile.size / (1024 * 1024))} MB. Processing may use
-            significant memory and take time.
+      {state.kind === 'large' && (
+        <div role="alert" className="rounded-xl border border-warn-line bg-warn-bg p-4 text-sm">
+          <div className="font-medium">This catalog is {mb(state.file.size)}</div>
+          <p className="mt-1">
+            It will be held in memory while you look at it, and opening it briefly needs about twice
+            that. That’s fine on most computers; phones may run out of memory.
           </p>
           <div className="mt-3 flex gap-2">
             <button
-              className="px-3 py-1.5 rounded-lg border border-line bg-surface"
-              onClick={() => {
-                setPendingFile(null);
-                setStatus('idle');
-              }}
+              type="button"
+              className="rounded-lg bg-fg px-3 py-1.5 text-bg"
+              onClick={() => void open(state.file)}
             >
-              Cancel
+              Open anyway
             </button>
             <button
-              className="px-3 py-1.5 rounded-lg bg-fg text-bg"
-              onClick={() => proceedInit(pendingFile)}
+              type="button"
+              className="rounded-lg border border-line bg-surface px-3 py-1.5"
+              onClick={() => setState({ kind: 'idle' })}
             >
-              Proceed anyway
+              Cancel
             </button>
           </div>
         </div>
       )}
 
-      {status === 'init' && (
-        <div className="mt-4 rounded-xl border border-info-line p-4 bg-info-bg">
-          Initializing… (loading sql-wasm.wasm and opening catalog)
+      {state.kind === 'error' && (
+        <div role="alert" className="rounded-xl border border-danger-line bg-danger-bg p-4 text-sm">
+          <div className="font-medium">{ERROR_COPY[state.code].title}</div>
+          <p className="mt-1">{ERROR_COPY[state.code].body}</p>
+          {state.code === 'wrong-type' && state.detail && (
+            <p className="mt-1 text-muted">You chose “{state.detail}”.</p>
+          )}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {ERROR_COPY[state.code].retry && state.file && (
+              <button
+                type="button"
+                className="rounded-lg bg-fg px-3 py-1.5 text-bg"
+                onClick={() => void open(state.file!)}
+              >
+                Try again
+              </button>
+            )}
+            <button
+              type="button"
+              className="rounded-lg border border-line bg-surface px-3 py-1.5"
+              onClick={() => input.current?.click()}
+            >
+              Choose another file
+            </button>
+          </div>
         </div>
       )}
 
-      {status === 'error' && (
-        <div className="mt-4 rounded-xl border border-danger-line p-4 bg-danger-bg">
-          <div className="font-medium">Couldn’t load that file</div>
-          <p className="text-sm mt-1">{error}</p>
-        </div>
-      )}
+      <div className="flex items-center gap-3 border-t border-line pt-4 text-sm">
+        <span className="text-muted">No catalog handy?</span>
+        <button
+          type="button"
+          disabled={busy}
+          className="rounded-lg border border-line px-3 py-1.5 hover:bg-surface disabled:opacity-60"
+          onClick={() => void openDemo()}
+        >
+          Try with sample data
+        </button>
+      </div>
     </div>
   );
 }
-
-export default Load;

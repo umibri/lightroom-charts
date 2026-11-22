@@ -19,6 +19,8 @@ UI (React)  ──Comlink──▶  Web Worker  ──▶  sql.js (WASM SQLite, 
 - Photos per month for the selected range (empty months shown as zero)
 - Top 15 lenses and cameras, and an ISO histogram by full stop
 - Date range: 12 months, 24 months (default), all time, or a custom month range; kept in the URL so back/forward and refresh-after-load keep your view
+- "Show data" under every chart lists the exact numbers (also read by screen readers)
+- No catalog handy? **Try with sample data** generates a demo catalog in the browser (works offline) and marks the page **Demo data**
 
 ## How photos are counted
 
