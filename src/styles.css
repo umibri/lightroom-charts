@@ -1,11 +1,28 @@
 @import 'tailwindcss';
 
 /*
- * Light-only until the visual pass (Phase 4) adds a proper dark theme; the
- * component classes assume a light background.
+ * Theme tokens. Components use the semantic utilities below (bg-bg, text-muted,
+ * border-line, bg-danger-bg, …) instead of raw palette colors, so both themes
+ * stay in sync. Dark applies when the OS prefers it, unless the user picked
+ * light; or when the user picked dark (see src/lib/theme.ts).
  */
 :root {
   color-scheme: light;
+  --bg: #ffffff;
+  --surface: #f5f5f7;
+  --fg: #18181b;
+  --muted: #5b5c66;
+  --line: #e2e2e7;
+  --line-strong: #a9aab3;
+  --accent: #1d5fd1;
+  --info-bg: #eef4ff;
+  --info-line: #c6d8fb;
+  --warn-bg: #fff6e5;
+  --warn-line: #f0d39a;
+  --danger-bg: #fdeeee;
+  --danger-line: #f1c2c2;
+  --danger-fg: #b42318;
+
   font-family:
     system-ui,
     -apple-system,
@@ -18,6 +35,61 @@
   -moz-osx-font-smoothing: grayscale;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #0f1013;
+    --surface: #1a1b1f;
+    --fg: #ececef;
+    --muted: #a3a4ad;
+    --line: #2d2e34;
+    --line-strong: #565862;
+    --accent: #6ea2ff;
+    --info-bg: #142036;
+    --info-line: #27416d;
+    --warn-bg: #2a2111;
+    --warn-line: #5b4520;
+    --danger-bg: #2c1515;
+    --danger-line: #5e2828;
+    --danger-fg: #ff8a7f;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0f1013;
+  --surface: #1a1b1f;
+  --fg: #ececef;
+  --muted: #a3a4ad;
+  --line: #2d2e34;
+  --line-strong: #565862;
+  --accent: #6ea2ff;
+  --info-bg: #142036;
+  --info-line: #27416d;
+  --warn-bg: #2a2111;
+  --warn-line: #5b4520;
+  --danger-bg: #2c1515;
+  --danger-line: #5e2828;
+  --danger-fg: #ff8a7f;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-fg: var(--fg);
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-info-bg: var(--info-bg);
+  --color-info-line: var(--info-line);
+  --color-warn-bg: var(--warn-bg);
+  --color-warn-line: var(--warn-line);
+  --color-danger-bg: var(--danger-bg);
+  --color-danger-line: var(--danger-line);
+  --color-danger-fg: var(--danger-fg);
+}
+
 body {
-  @apply bg-white text-neutral-900;
+  @apply bg-bg text-fg;
 }
