@@ -34,7 +34,8 @@ test('loads a catalog and shows all four charts with correct totals', async ({ p
   const e = expected();
   await load(page, FIXTURES.demo);
   await expect(page).toHaveURL(/#\/stats\?range=24m$/);
-  await expect(page.getByText(`demo.lrcat · ${fmt(e.photos)} photos`)).toBeVisible();
+  await expect(page.getByText('demo.lrcat')).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Whole catalog' })).toContainText(fmt(e.photos));
   await expect(timelineNote(page)).toContainText(`· ${fmt(e.m24)}`);
   for (const name of ['Photos per month', 'Lenses', 'Cameras', 'ISO']) {
     const card = page.locator('section', { has: page.getByRole('heading', { name }) });

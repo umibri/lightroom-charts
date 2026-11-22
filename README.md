@@ -4,6 +4,21 @@ Local, privacy-first photo analytics. Open a Lightroom Classic catalog (`.lrcat`
 
 **Live:** https://umibri.github.io/lightroom-charts/
 
+![Stats page with demo data: summary tiles, photos per month, top lenses and cameras](docs/screenshots/stats-desktop-light.png)
+
+<details>
+<summary>Dark mode, phone and the Load page</summary>
+
+![Stats page in dark mode](docs/screenshots/stats-desktop-dark.png)
+
+<img src="docs/screenshots/stats-phone-dark.png" alt="Stats page on a phone, dark mode" width="320" />
+
+![Load page](docs/screenshots/load-desktop-light.png)
+
+</details>
+
+Screenshots use the built-in sample data. Regenerate with `SCREENSHOTS=1 npx playwright test screenshots --project=desktop`.
+
 > Close Lightroom before loading your catalog. While Lightroom is open, recent edits can sit in the `.lrcat-wal` side file, which this app does not read.
 
 ## How it works

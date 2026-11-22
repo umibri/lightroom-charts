@@ -131,7 +131,7 @@ export default function LoadRoute() {
       )}
 
       <label
-        className={`block cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent ${
+        className={`block cursor-pointer rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent ${
           dragging ? 'border-accent bg-info-bg' : 'border-line-strong hover:bg-surface'
         } ${busy ? 'pointer-events-none opacity-60' : ''}`}
       >
@@ -143,6 +143,19 @@ export default function LoadRoute() {
           disabled={busy}
           onChange={(e) => choose(e.target.files)}
         />
+        <svg
+          viewBox="0 0 24 24"
+          aria-hidden
+          className={`mx-auto mb-3 size-8 ${dragging ? 'text-accent' : 'text-muted'}`}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        >
+          <path d="M12 15V4m0 0L8 8m4-4 4 4" />
+          <path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3" />
+        </svg>
         <span className="block font-medium">
           {dragging ? 'Drop to open' : 'Drop your .lrcat here, or choose a file'}
         </span>

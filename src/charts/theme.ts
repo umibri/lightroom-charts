@@ -5,6 +5,8 @@ export interface ThemeColors {
   muted: string;
   line: string;
   accent: string;
+  /** Mark color for bars (validated per theme). */
+  chart: string;
   surface: string;
 }
 
@@ -16,6 +18,7 @@ function readColors(): ThemeColors {
     muted: v('--muted'),
     line: v('--line'),
     accent: v('--accent'),
+    chart: v('--chart'),
     surface: v('--surface'),
   };
 }
