@@ -116,10 +116,10 @@ export default function StatsRoute() {
   const failed = [timeline, lenses, cameras, iso, exposure, timeOfWeek].some((q) => q.isError);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 sm:space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <h1 className="flex items-center gap-2 text-2xl font-semibold sm:text-3xl">
             Stats
             {open.demo && (
               <span className="rounded-full border border-warn-line bg-warn-bg px-2 py-0.5 text-xs font-medium">
@@ -162,7 +162,7 @@ export default function StatsRoute() {
       ))}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-        <span className="text-sm text-muted">Charts below use this date range</span>
+        <span className="text-sm text-muted sm:text-base">Charts below use this date range</span>
         <DateFilter
           key={`${search.range}:${search.from}:${search.to}`}
           search={search}
@@ -190,7 +190,7 @@ export default function StatsRoute() {
             {timelineOpt ? (
               <EChart
                 option={timelineOpt}
-                height={wide ? 260 : 200}
+                height={wide ? 340 : 240}
                 label={`Photos per month, ${rangeText}, ${total ?? 0} photos in total`}
               />
             ) : (
@@ -210,7 +210,7 @@ export default function StatsRoute() {
               <Status>No photos in this date range. Try a wider range.</Status>
             </Card>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-5 sm:gap-6 lg:grid-cols-2">
               <Card title="Lenses" note={joinNotes('Top 15', videoNote)}>
                 {lensOpt && lenses.data ? (
                   <EChart
@@ -255,6 +255,7 @@ export default function StatsRoute() {
                 shape="columns"
                 colors={colors}
                 labelWidth={labelWidth}
+                columnHeight={wide ? 300 : 240}
                 caption={`ISO, ${rangeText}`}
                 binName="ISO"
               />
@@ -270,6 +271,7 @@ export default function StatsRoute() {
                 shape="columns"
                 colors={colors}
                 labelWidth={labelWidth}
+                columnHeight={wide ? 300 : 240}
                 caption={`Aperture, ${rangeText}`}
                 binName="Aperture"
               />
@@ -281,6 +283,7 @@ export default function StatsRoute() {
                 shape="bars"
                 colors={colors}
                 labelWidth={labelWidth}
+                columnHeight={wide ? 300 : 240}
                 caption={`Shutter speed, ${rangeText}`}
                 binName="Shutter speed"
               />
@@ -296,6 +299,7 @@ export default function StatsRoute() {
                 shape="bars"
                 colors={colors}
                 labelWidth={labelWidth}
+                columnHeight={wide ? 300 : 240}
                 caption={`Focal length in mm, ${rangeText}`}
                 binName="Focal length (mm)"
               />
@@ -307,6 +311,7 @@ export default function StatsRoute() {
                 shape="many-columns"
                 colors={colors}
                 labelWidth={labelWidth}
+                columnHeight={wide ? 300 : 240}
                 caption={`Photos by hour of day, ${rangeText}`}
                 binName="Hour"
               />
@@ -316,6 +321,7 @@ export default function StatsRoute() {
                 shape="columns"
                 colors={colors}
                 labelWidth={labelWidth}
+                columnHeight={wide ? 300 : 240}
                 caption={`Photos by day of week, ${rangeText}`}
                 binName="Day"
               />

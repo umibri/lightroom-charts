@@ -18,7 +18,7 @@ const activeNav = { className: 'text-fg font-medium' };
 
 function Logo() {
   return (
-    <svg viewBox="0 0 32 32" className="size-6 shrink-0" aria-hidden>
+    <svg viewBox="0 0 32 32" className="size-6 shrink-0 sm:size-7" aria-hidden>
       <rect width="32" height="32" rx="7" className="fill-chart" />
       <rect x="7" y="16" width="4" height="9" rx="1.5" fill="#fff" />
       <rect x="14" y="10" width="4" height="15" rx="1.5" fill="#fff" />
@@ -31,12 +31,15 @@ export default function Root() {
   return (
     <div className="flex min-h-dvh flex-col">
       <header className="border-b border-line">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-4 px-4 py-3">
-          <Link to="/load" className="flex items-center gap-2 font-semibold whitespace-nowrap">
+        <div className="mx-auto flex w-full max-w-6xl items-center justify-between gap-4 px-4 py-3">
+          <Link
+            to="/load"
+            className="flex items-center gap-2 font-semibold whitespace-nowrap sm:text-lg"
+          >
             <Logo />
             Lightroom Charts
           </Link>
-          <nav className="flex items-center gap-3 text-sm sm:gap-4">
+          <nav className="flex items-center gap-3 text-sm sm:gap-5 sm:text-base">
             <Link to="/load" className={navLink} activeProps={activeNav}>
               Load
             </Link>
@@ -57,11 +60,11 @@ export default function Root() {
           </nav>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:py-8">
         <Outlet />
       </main>
       <footer className="border-t border-line">
-        <div className="mx-auto flex w-full max-w-5xl flex-wrap justify-between gap-2 px-4 py-4 text-xs text-muted">
+        <div className="mx-auto flex w-full max-w-6xl flex-wrap justify-between gap-2 px-4 py-5 text-xs text-muted sm:text-sm">
           <span>Runs entirely in your browser. Your catalog is never uploaded.</span>
           <a
             href="https://github.com/umibri/lightroom-charts"

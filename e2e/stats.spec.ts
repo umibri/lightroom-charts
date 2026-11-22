@@ -14,7 +14,9 @@ async function load(page: Page, file: string) {
 const timelineNote = (page: Page) =>
   page
     .locator('section', { has: page.getByRole('heading', { name: 'Photos per month' }) })
-    .locator('.text-xs');
+
+    // The note sits next to the card title; don't depend on its styling classes.
+    .locator('h2 + span');
 
 test('stats without a catalog redirects to Load with an explanation', async ({ page }) => {
   await page.goto('./#/stats?range=12m');

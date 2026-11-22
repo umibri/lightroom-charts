@@ -66,8 +66,8 @@ describe('chart options', () => {
   });
 
   it('ranking height grows with rows and has a floor', () => {
-    expect(rankingHeight(0)).toBe(120);
-    expect(rankingHeight(15)).toBe(30 * 15 + 24);
+    expect(rankingHeight(0)).toBe(140);
+    expect(rankingHeight(15)).toBe(34 * 15 + 28);
   });
 });
 

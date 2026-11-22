@@ -10,7 +10,7 @@ interface Props {
  */
 export default function DataTable({ caption, columns, rows }: Props) {
   return (
-    <details className="mt-2 text-sm">
+    <details className="mt-3 text-sm sm:text-base">
       <summary className="cursor-pointer text-muted hover:text-fg">Show data</summary>
       <div className="mt-2 max-h-72 overflow-auto rounded-lg border border-line">
         <table className="w-full">

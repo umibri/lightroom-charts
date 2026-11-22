@@ -48,7 +48,7 @@ export default function DateFilter({ search, resolved, onChange }: Props) {
               key={p.key}
               type="button"
               aria-pressed={active}
-              className={`rounded-md px-3 py-1 text-sm ${
+              className={`rounded-md px-3 py-1 text-sm sm:px-4 sm:py-1.5 sm:text-base ${
                 active ? 'bg-fg text-bg' : 'text-muted hover:text-fg'
               }`}
               onClick={() => {

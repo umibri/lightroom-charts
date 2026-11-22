@@ -17,11 +17,13 @@ export function Card({
   children: ReactNode;
 }) {
   return (
-    <section className={`min-w-0 rounded-xl border border-line p-4 ${wide ? 'lg:col-span-2' : ''}`}>
+    <section
+      className={`min-w-0 rounded-2xl border border-line p-4 sm:p-6 ${wide ? 'lg:col-span-2' : ''}`}
+    >
       {/* Titles stay on one line; a long note wraps below instead of squeezing it. */}
-      <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
-        <h2 className="font-medium whitespace-nowrap">{title}</h2>
-        {note && <span className="text-xs text-muted">{note}</span>}
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+        <h2 className="text-lg font-semibold whitespace-nowrap">{title}</h2>
+        {note && <span className="text-sm text-muted">{note}</span>}
       </div>
       {children}
     </section>
@@ -29,7 +31,7 @@ export function Card({
 }
 
 export function Status({ children }: { children: ReactNode }) {
-  return <p className="py-8 text-center text-sm text-muted">{children}</p>;
+  return <p className="py-10 text-center text-muted">{children}</p>;
 }
 
 type Shape = 'columns' | 'many-columns' | 'bars';
@@ -50,6 +52,7 @@ export function BinsCard({
   labelWidth,
   caption,
   binName,
+  columnHeight = 260,
 }: {
   title: string;
   note?: string;
@@ -64,6 +67,8 @@ export function BinsCard({
   caption: string;
   /** First table column header, e.g. "Aperture". */
   binName: string;
+  /** Height of column charts in px (bars size to their row count). */
+  columnHeight?: number;
 }) {
   const option = useMemo(() => {
     if (!bins) return null;
@@ -82,7 +87,7 @@ export function BinsCard({
       {option && bins ? (
         <EChart
           option={option}
-          height={shape === 'bars' ? rankingHeight(bins.length) : 220}
+          height={shape === 'bars' ? rankingHeight(bins.length) : columnHeight}
           label={`${caption}: ${bins.map((b) => `${b.label} ${b.count}`).join(', ')}`}
         />
       ) : (

@@ -131,5 +131,5 @@ export function columnOption(
 
 /** Number of rows to give a ranking chart enough height per bar. */
 export function rankingHeight(n: number): number {
-  return Math.max(120, 30 * Math.max(n, 1) + 24);
+  return Math.max(140, 34 * Math.max(n, 1) + 28);
 }
