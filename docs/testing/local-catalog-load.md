@@ -12,8 +12,9 @@
 1. Visit `#/load` (the root URL redirects there).
 2. Pick a valid `.lrcat` or `.db`.
 3. You should see “Initializing…”, then get sent to `#/stats`.
-4. `#/stats` should show the catalog summary (photos, videos, virtual copies, date range, cameras, lenses). `npm run inspect -- <same file>` prints the same numbers.
-5. In dev only, `#/debug` lists tables and Top-15 cameras/lenses for the last two years.
+4. `#/stats?range=24m` shows the file name and photo count, then four charts: photos per month, lenses, cameras, ISO. The timeline's total matches `npm run inspect -- <same file> --from <first month shown>`.
+5. Date range: 12 months / All update every chart; Custom shows two month inputs, and typing quickly commits only the settled value (one query).
+6. In dev only, `#/debug` lists tables and Top-15 cameras/lenses for the last two years.
 
 ## Edge cases
 
@@ -21,7 +22,10 @@
 - **Renamed non-database** (e.g. a `.txt` renamed to `.lrcat`): “isn’t a SQLite database”.
 - **Other SQLite database**: “a database, but not a Lightroom Classic catalog”.
 - **Large file (≥ 500 MB)**: You should see a warning with **Proceed** / **Cancel**.
-- **Not initialized**: opening `#/stats` directly, after a reload, or after a failed open shows “No catalog is open” with a link to Load.
+- **Not initialized**: opening `#/stats` directly or after a reload redirects to `#/load?from=stats`, which explains that catalogs live only in the tab's memory.
+- **Empty range**: a custom range with no photos shows “No photos in this date range”.
+
+Automated: `npm run e2e` covers the flows above at 1280×800 and Pixel 7 sizes and saves chart screenshots under `test-results/`.
 
 ## Build parity checks
 

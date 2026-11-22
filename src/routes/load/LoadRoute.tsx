@@ -1,7 +1,9 @@
 import React from 'react';
 import { openCatalog } from '@/lib/dbClient';
 import type { CatalogErrorCode } from '@/catalog/validate.ts';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
+import { setOpenCatalog } from '@/state/catalogStore';
+import { DEFAULT_RANGE } from '@/catalog/filters.ts';
 
 const MAX_WARN_BYTES = 500 * 1024 * 1024; // 500MB
 
@@ -18,6 +20,7 @@ function isAllowed(file: File) {
 
 function Load() {
   const nav = useNavigate();
+  const { from } = useSearch({ from: '/load' });
   const [fileName, setFileName] = React.useState<string>('');
   const [status, setStatus] = React.useState<'idle' | 'warn' | 'init' | 'error'>('idle');
   const [error, setError] = React.useState<string>('');
@@ -47,9 +50,11 @@ function Load() {
     try {
       const res = await openCatalog(f);
       if (res.ok) {
-        nav({ to: '/stats' });
+        setOpenCatalog(res.value);
+        nav({ to: '/stats', search: { range: DEFAULT_RANGE } });
         return;
       }
+      setOpenCatalog(null);
       setStatus('error');
       setError(OPEN_ERROR_TEXT[res.error.code]);
       console.error(res.error);
@@ -63,6 +68,12 @@ function Load() {
   return (
     <div className="mx-auto max-w-xl p-6">
       <h1 className="text-2xl font-semibold mb-4">Load Catalog</h1>
+      {from === 'stats' && status === 'idle' && (
+        <p className="mb-4 rounded-xl border border-info-line bg-info-bg p-3 text-sm">
+          No catalog is open. Catalogs stay in this tab’s memory only, so after a reload you need to
+          load yours again.
+        </p>
+      )}
 
       <label className="block border-2 border-dashed border-line-strong rounded-2xl p-6 text-center cursor-pointer hover:bg-surface">
         <input

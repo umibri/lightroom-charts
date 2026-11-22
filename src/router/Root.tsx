@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Link, Outlet } from '@tanstack/react-router';
 import ThemeToggle from '@/router/ThemeToggle';
+import { DEFAULT_RANGE } from '@/catalog/filters.ts';
 import '@/styles.css';
 
 // Router devtools are dev-only; production builds drop this branch and its chunk.
@@ -24,7 +25,11 @@ export default function Root() {
             <Link to="/load" className="text-muted hover:text-fg">
               Load
             </Link>
-            <Link to="/stats" className="text-muted hover:text-fg">
+            <Link
+              to="/stats"
+              search={{ range: DEFAULT_RANGE }}
+              className="text-muted hover:text-fg"
+            >
               Stats
             </Link>
             {import.meta.env.DEV && (
