@@ -24,7 +24,7 @@ test('stats without a catalog redirects to Load with an explanation', async ({ p
 
 test('rejects a renamed non-database and a non-Lightroom database', async ({ page }) => {
   await load(page, FIXTURES.notDb);
-  await expect(page.getByText('isn’t a SQLite database')).toBeVisible();
+  await expect(page.getByText('That file isn’t a catalog')).toBeVisible();
   await page.locator('input[type=file]').setInputFiles(FIXTURES.otherDb);
   await expect(page.getByText('not a Lightroom Classic catalog')).toBeVisible();
   await expect(page).toHaveURL(/#\/load/);

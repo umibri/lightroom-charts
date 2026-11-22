@@ -18,10 +18,13 @@
 
 ## Edge cases
 
-- **Wrong file type**: Selecting a non-`.lrcat`/`.db` should show a clear error.
+- **Wrong file type**: a non-`.lrcat`/`.db` file shows “That’s not a Lightroom catalog” and names the file. Choosing the same file again still responds.
+- **Drop anywhere**: dropping a file outside the drop zone is handled by the app; the browser never navigates to the file.
+- **Retry**: read and open failures (and out-of-memory) offer **Try again** with the same file.
+- **Demo**: **Try with sample data** opens a generated catalog with a **Demo data** badge.
 - **Renamed non-database** (e.g. a `.txt` renamed to `.lrcat`): “isn’t a SQLite database”.
 - **Other SQLite database**: “a database, but not a Lightroom Classic catalog”.
-- **Large file (≥ 500 MB)**: You should see a warning with **Proceed** / **Cancel**.
+- **Large file (≥ 500 MB)**: a warning with the size and **Open anyway** / **Cancel**.
 - **Not initialized**: opening `#/stats` directly or after a reload redirects to `#/load?from=stats`, which explains that catalogs live only in the tab's memory.
 - **Empty range**: a custom range with no photos shows “No photos in this date range”.
 

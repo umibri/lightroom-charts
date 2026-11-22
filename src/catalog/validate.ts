@@ -1,7 +1,8 @@
 import type { Db } from './db.ts';
 
 /** Why a file was rejected. UI copy lives with the UI; these are stable codes. */
-export type CatalogErrorCode = 'not-sqlite' | 'not-lightroom' | 'open-failed';
+export type CatalogErrorCode =
+  'not-sqlite' | 'not-lightroom' | 'open-failed' | 'read-failed' | 'too-large';
 
 export class CatalogError extends Error {
   readonly code: CatalogErrorCode;

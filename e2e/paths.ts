@@ -7,6 +7,7 @@ export const FIXTURES = {
   demo: path.join(dir, 'demo.lrcat'),
   notDb: path.join(dir, 'renamed.lrcat'),
   otherDb: path.join(dir, 'other.db'),
+  text: path.join(dir, 'notes.txt'),
   expected: path.join(dir, 'expected.json'),
 };
 

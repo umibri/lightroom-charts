@@ -33,6 +33,7 @@ export default async function globalSetup() {
   raw.close();
 
   writeFileSync(FIXTURES.notDb, 'definitely not a database '.repeat(20));
+  writeFileSync(FIXTURES.text, 'shopping list');
   const other = new SQL.Database();
   other.run('CREATE TABLE notes (id INTEGER PRIMARY KEY, body TEXT)');
   writeFileSync(FIXTURES.otherDb, other.export());

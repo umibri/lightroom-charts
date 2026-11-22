@@ -14,6 +14,7 @@ import {
   type Summary,
 } from '@/catalog/queries.ts';
 import type { Month, MonthRange } from '@/catalog/transforms.ts';
+import { buildCatalog, demoPhotos } from '@/catalog/fixtures.ts';
 
 let SQL: SqlJsStatic | null = null;
 let raw: Database | null = null;
@@ -43,42 +44,95 @@ export interface OpenResult {
   fileName: string;
   sizeBytes: number;
   wal: boolean;
+  /** Built-in sample data, not the user's catalog. */
+  demo: boolean;
   summary: Summary;
 }
 
 /** Errors crossing the worker boundary lose their class; send a plain shape instead. */
 export type OpenError = { code: CatalogError['code']; message: string };
+export type OpenOutcome = { ok: true; value: OpenResult } | { ok: false; error: OpenError };
+
+/** Progress reported while opening, for the Load page. */
+export type OpenStage = 'reading' | 'opening' | 'checking';
+
+function fail(e: unknown): OpenOutcome {
+  close();
+  if (e instanceof CatalogError) return { ok: false, error: { code: e.code, message: e.message } };
+  const err = e as Error;
+  // Allocation failures surface as RangeError ("Array buffer allocation failed").
+  const code = err?.name === 'RangeError' ? 'too-large' : 'open-failed';
+  return { ok: false, error: { code, message: err?.message ?? String(e) } };
+}
+
+function openBytes(SQL: SqlJsStatic, bytes: Uint8Array) {
+  try {
+    raw = new SQL.Database(bytes);
+  } catch (e) {
+    if ((e as Error)?.name === 'RangeError') throw e;
+    throw new CatalogError('open-failed', (e as Error).message);
+  }
+  db = fromSqlJs(raw);
+}
 
 const api = {
   /**
    * Open a catalog from the File handle itself. Reading happens here, off the
    * main thread, and the only full copy of the bytes is the one sql.js keeps.
    */
-  async open(
-    file: File
-  ): Promise<{ ok: true; value: OpenResult } | { ok: false; error: OpenError }> {
+  async open(file: File, onStage?: (stage: OpenStage) => void): Promise<OpenOutcome> {
     close();
     try {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const { wal } = checkHeader(bytes);
-      const SQL = await engine();
+      onStage?.('reading');
+      let buf: ArrayBuffer;
       try {
-        raw = new SQL.Database(bytes);
+        buf = await file.arrayBuffer();
       } catch (e) {
-        throw new CatalogError('open-failed', (e as Error).message);
+        if ((e as Error)?.name === 'RangeError') throw e;
+        throw new CatalogError('read-failed', (e as Error)?.message ?? 'Could not read the file');
       }
-      db = fromSqlJs(raw);
-      assertLightroom(db);
-      const summary = getSummary(db);
-      return { ok: true, value: { fileName: file.name, sizeBytes: file.size, wal, summary } };
-    } catch (e) {
-      close();
-      if (e instanceof CatalogError)
-        return { ok: false, error: { code: e.code, message: e.message } };
+      const bytes = new Uint8Array(buf);
+      const { wal } = checkHeader(bytes);
+      onStage?.('opening');
+      openBytes(await engine(), bytes);
+      onStage?.('checking');
+      assertLightroom(db!);
+      const summary = getSummary(db!);
       return {
-        ok: false,
-        error: { code: 'open-failed', message: (e as Error)?.message ?? String(e) },
+        ok: true,
+        value: { fileName: file.name, sizeBytes: file.size, wal, demo: false, summary },
       };
+    } catch (e) {
+      return fail(e);
+    }
+  },
+
+  /** Open a generated sample catalog (no file, works offline). */
+  async openDemo(): Promise<OpenOutcome> {
+    close();
+    try {
+      const SQL = await engine();
+      const now = new Date();
+      const demo = buildCatalog(
+        SQL,
+        demoPhotos(3000, { year: now.getFullYear(), month: now.getMonth() + 1 })
+      );
+      const bytes = demo.export();
+      demo.close();
+      openBytes(SQL, bytes);
+      const summary = getSummary(db!);
+      return {
+        ok: true,
+        value: {
+          fileName: 'Demo catalog',
+          sizeBytes: bytes.length,
+          wal: false,
+          demo: true,
+          summary,
+        },
+      };
+    } catch (e) {
+      return fail(e);
     }
   },
 
