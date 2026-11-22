@@ -13,13 +13,14 @@ export function monthLabel(m: string): string {
 function base(c: ThemeColors) {
   return {
     animationDuration: 300,
-    textStyle: { color: c.muted, fontFamily: 'inherit' },
+    // Chart text is in px (the root font size doesn't reach the canvas).
+    textStyle: { color: c.muted, fontFamily: 'inherit', fontSize: 13 },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       backgroundColor: c.surface,
       borderColor: c.line,
-      textStyle: { color: c.fg },
+      textStyle: { color: c.fg, fontSize: 13 },
     },
   };
 }
@@ -27,7 +28,7 @@ function base(c: ThemeColors) {
 const valueAxis = (c: ThemeColors) => ({
   type: 'value',
   minInterval: 1,
-  axisLabel: { color: c.muted },
+  axisLabel: { color: c.muted, fontSize: 13 },
   splitLine: { lineStyle: { color: c.line } },
 });
 
@@ -39,7 +40,7 @@ export function timelineOption(rows: MonthCount[], c: ThemeColors): EChartsCoreO
     xAxis: {
       type: 'category',
       data: rows.map((r) => monthLabel(r.month)),
-      axisLabel: { color: c.muted, hideOverlap: true },
+      axisLabel: { color: c.muted, hideOverlap: true, fontSize: 13 },
       axisLine: { lineStyle: { color: c.line } },
       axisTick: { show: false },
     },
@@ -76,7 +77,7 @@ export function rankingOption(
     yAxis: {
       type: 'category',
       data: top.map((r) => r.name),
-      axisLabel: { color: c.fg, width: labelWidth, overflow: 'truncate' },
+      axisLabel: { color: c.fg, width: labelWidth, overflow: 'truncate', fontSize: 13 },
       axisLine: { lineStyle: { color: c.line } },
       axisTick: { show: false },
     },
@@ -87,7 +88,7 @@ export function rankingOption(
         data: top.map((r) => r.count),
         itemStyle: { color: c.chart, borderRadius: [0, 4, 4, 0] },
         barMaxWidth: 18,
-        label: { show: true, position: 'right', color: c.muted },
+        label: { show: true, position: 'right', color: c.muted, fontSize: 13 },
       },
     ],
   };
@@ -108,8 +109,8 @@ export function columnOption(
       // Few bins: show every label (ECharts would skip alternate ones on phones).
       // Many bins (24 hours): let ECharts thin labels that would overlap.
       axisLabel: everyLabel
-        ? { color: c.muted, interval: 0, fontSize: 11 }
-        : { color: c.muted, hideOverlap: true, fontSize: 11 },
+        ? { color: c.muted, interval: 0, fontSize: 12 }
+        : { color: c.muted, hideOverlap: true, fontSize: 12 },
       axisLine: { lineStyle: { color: c.line } },
       axisTick: { show: false },
     },

@@ -7,6 +7,9 @@
  * light; or when the user picked dark (see src/lib/theme.ts).
  */
 :root {
+  /* 17px base (was the browser default 16px): body text read too small.
+     A percentage keeps the user's own browser font-size setting in effect. */
+  font-size: 106.25%;
   color-scheme: light;
   --bg: #ffffff;
   --surface: #f5f5f7;
