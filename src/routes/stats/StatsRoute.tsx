@@ -90,6 +90,16 @@ export default function StatsRoute() {
     enabled,
   });
 
+  const videos = useQuery({
+    queryKey: ['videos', ...key],
+    queryFn: () => catalog().videoCount(range),
+    enabled,
+  });
+  // Shown on the gear/ISO charts, which count stills only.
+  const videoNote = videos.data ? `${videos.data.toLocaleString()} videos not included` : null;
+  const joinNotes = (...parts: (string | null | undefined)[]) =>
+    parts.filter(Boolean).join(' · ') || undefined;
+
   const total = timeline.data?.reduce((n, r) => n + r.count, 0);
   const empty = total === 0;
   const labelWidth = wide ? 200 : 110;
@@ -210,7 +220,7 @@ export default function StatsRoute() {
             </Card>
           ) : (
             <div className="grid gap-4 lg:grid-cols-2">
-              <Card title="Lenses" note="Top 15">
+              <Card title="Lenses" note={joinNotes('Top 15', videoNote)}>
                 {lensOpt && lenses.data ? (
                   <EChart
                     option={lensOpt}
@@ -228,7 +238,7 @@ export default function StatsRoute() {
                   />
                 )}
               </Card>
-              <Card title="Cameras" note="Top 15">
+              <Card title="Cameras" note={joinNotes('Top 15', videoNote)}>
                 {cameraOpt && cameras.data ? (
                   <EChart
                     option={cameraOpt}
@@ -248,9 +258,10 @@ export default function StatsRoute() {
               </Card>
               <Card
                 title="ISO"
-                note={
-                  iso.data?.unknown ? `${iso.data.unknown.toLocaleString()} unknown` : undefined
-                }
+                note={joinNotes(
+                  iso.data?.unknown ? `${iso.data.unknown.toLocaleString()} unknown` : null,
+                  videoNote
+                )}
               >
                 {isoOpt && iso.data ? (
                   <EChart

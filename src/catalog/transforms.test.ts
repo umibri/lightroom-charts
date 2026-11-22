@@ -72,10 +72,26 @@ describe('zeroFillMonths', () => {
 describe('presetRange', () => {
   const extent = { first: '2019-06', last: '2025-01' };
 
-  it('12/24 months end at (and include) the current month', () => {
-    expect(presetRange('12m', '2026-11', extent)).toEqual({ from: '2025-12', to: '2026-11' });
-    expect(presetRange('24m', '2026-11', extent)).toEqual({ from: '2024-12', to: '2026-11' });
+  it('for a catalog still in use, 12/24 months end at (and include) the current month', () => {
+    const current = { first: '2019-06', last: '2026-11' };
+    expect(presetRange('12m', '2026-11', current)).toEqual({ from: '2025-12', to: '2026-11' });
+    expect(presetRange('24m', '2026-11', current)).toEqual({ from: '2024-12', to: '2026-11' });
     expect(monthsBetween('2024-12', '2026-11')).toHaveLength(24);
+    // Photos dated in the future (wrong camera clock) don't move the window.
+    expect(presetRange('12m', '2026-11', { first: '2019-06', last: '2027-03' })).toEqual({
+      from: '2025-12',
+      to: '2026-11',
+    });
+  });
+
+  it('for an older catalog, 12/24 months end at the latest photo, not today', () => {
+    // Otherwise a catalog last used in Jan 2025 would open on an empty chart.
+    expect(presetRange('12m', '2026-11', extent)).toEqual({ from: '2024-02', to: '2025-01' });
+    expect(presetRange('24m', '2026-11', extent)).toEqual({ from: '2023-02', to: '2025-01' });
+  });
+
+  it('with no dated photos, 12/24 months fall back to ending today', () => {
+    expect(presetRange('12m', '2026-11', null)).toEqual({ from: '2025-12', to: '2026-11' });
   });
 
   it('all spans the catalog extent, or null when nothing is dated', () => {

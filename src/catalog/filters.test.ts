@@ -35,10 +35,10 @@ describe('parseStatsSearch', () => {
 describe('resolveRange', () => {
   const extent = { first: '2020-03', last: '2025-08' };
 
-  it('resolves presets relative to today', () => {
+  it('resolves presets against the catalog (latest photo Aug 2025, today Nov 2026)', () => {
     expect(resolveRange({ range: '12m' }, '2026-11', extent)).toEqual({
-      from: '2025-12',
-      to: '2026-11',
+      from: '2024-09',
+      to: '2025-08',
     });
     expect(resolveRange({ range: 'all' }, '2026-11', extent)).toEqual({
       from: '2020-03',

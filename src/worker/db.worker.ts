@@ -11,6 +11,7 @@ import {
   getTimeline,
   getTopCameras,
   getTopLenses,
+  getVideoCount,
   type Summary,
 } from '@/catalog/queries.ts';
 import type { Month, MonthRange } from '@/catalog/transforms.ts';
@@ -157,6 +158,7 @@ const api = {
   topCameras: (range: MonthRange | null, limit?: number) => getTopCameras(current(), range, limit),
   topLenses: (range: MonthRange | null, limit?: number) => getTopLenses(current(), range, limit),
   isoHistogram: (range: MonthRange | null) => getIsoHistogram(current(), range),
+  videoCount: (range: MonthRange | null) => getVideoCount(current(), range),
 
   /** Raw SQL for the dev-only debug page. Not used by product code. */
   query: (sql: string, params: Param[] = []): Row[] => current().all(sql, params),

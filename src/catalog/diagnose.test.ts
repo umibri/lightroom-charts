@@ -3,7 +3,7 @@ import initSqlJs, { type SqlJsStatic } from 'sql.js';
 import { fromSqlJs, type Db } from './db.ts';
 import { buildCatalog, demoPhotos, type FixtureOptions, type FixturePhoto } from './fixtures.ts';
 import { detectExifLink, diagnose, healthWarnings } from './diagnose.ts';
-import { getTopCameras } from './queries.ts';
+import { getTopCameras, getVideoCount } from './queries.ts';
 
 let SQL: SqlJsStatic;
 beforeAll(async () => {
@@ -43,7 +43,8 @@ describe('detectExifLink', () => {
   it('a wrong join really would bucket everything as [Unknown] (why detection matters)', () => {
     const db = open(demo, { exifKeyedBy: 'file' }); // exifLink left at default id_local
     const cams = getTopCameras(db, null, 100);
-    expect(cams).toEqual([{ name: '[Unknown]', count: 300 }]);
+    // Every still lands in [Unknown] (videos are excluded from gear charts).
+    expect(cams).toEqual([{ name: '[Unknown]', count: 300 - getVideoCount(db, null) }]);
   });
 });
 

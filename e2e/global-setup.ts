@@ -21,12 +21,13 @@ export default async function globalSetup() {
   const db = fromSqlJs(raw);
   const s = getSummary(db);
   const today = monthOf(now);
+  const extent = { first: s.firstMonth!, last: s.lastMonth! };
   const total = (r: { from: string; to: string } | null) =>
     r ? getTimeline(db, r).reduce((n, x) => n + x.count, 0) : 0;
   const expected: Expected = {
     photos: s.photos,
-    m12: total(presetRange('12m', today, null)),
-    m24: total(presetRange('24m', today, null)),
+    m12: total(presetRange('12m', today, extent)),
+    m24: total(presetRange('24m', today, extent)),
     all: total({ from: s.firstMonth!, to: s.lastMonth! }),
   };
   writeFileSync(FIXTURES.expected, JSON.stringify(expected));

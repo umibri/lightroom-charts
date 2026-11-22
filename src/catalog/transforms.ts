@@ -62,9 +62,11 @@ export function zeroFillMonths(rows: MonthCount[], from: Month, to: Month): Mont
 export type Preset = '12m' | '24m' | 'all';
 
 /**
- * Resolve a preset to a concrete range. `today` is the anchor for 12/24 months
- * (the last N months including the current one). For 'all', `extent` is the
- * catalog's first/last capture month; null when the catalog has no dated photos.
+ * Resolve a preset to a concrete range. 12/24 months are the last N months of
+ * the catalog: they end at the current month, or at the latest photo's month
+ * when the catalog stops earlier (otherwise an older catalog opens on an empty
+ * chart). For 'all', `extent` is the catalog's first/last capture month; null
+ * when the catalog has no dated photos.
  */
 export function presetRange(
   preset: Preset,
@@ -73,7 +75,8 @@ export function presetRange(
 ): { from: Month; to: Month } | null {
   if (preset === 'all') return extent ? { from: extent.first, to: extent.last } : null;
   const n = preset === '12m' ? 12 : 24;
-  return { from: addMonths(today, -(n - 1)), to: today };
+  const end = extent && extent.last < today ? extent.last : today;
+  return { from: addMonths(end, -(n - 1)), to: end };
 }
 
 /** ISO buckets: one per full stop, with open-ended ends. */

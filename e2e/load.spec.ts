@@ -72,6 +72,11 @@ test('demo mode opens sample data with a visible badge', async ({ page }) => {
   await expect(page.getByRole('region', { name: 'Whole catalog' })).toContainText('3,000');
   await page.getByRole('button', { name: '12 months' }).click();
   await expect(page).toHaveURL(/range=12m/);
+  // Gear and ISO charts count stills only and say how many videos they leave out.
+  for (const name of ['Lenses', 'Cameras', 'ISO']) {
+    const card = page.locator('section', { has: page.getByRole('heading', { name }) });
+    await expect(card).toContainText(/\d+ videos not included/);
+  }
 });
 
 test('every chart has a data table with the same rows', async ({ page }) => {

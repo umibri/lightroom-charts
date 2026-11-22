@@ -26,8 +26,16 @@ const MONTH = `substr(i.captureTime, 1, 7)`;
 const DATED = `i.captureTime GLOB '[0-9][0-9][0-9][0-9]-[0-1][0-9]*'`;
 const ORIGINALS = `i.masterImage IS NULL`;
 
-function where(range: MonthRange | null): { sql: string; params: Param[] } {
+// Lightroom records no camera/lens/ISO for videos, so gear and exposure
+// charts count stills only (videos would all land in [Unknown]).
+const STILLS = `COALESCE(i.fileFormat, '') <> 'VIDEO'`;
+
+function where(
+  range: MonthRange | null,
+  { stillsOnly = false } = {}
+): { sql: string; params: Param[] } {
   const parts = [ORIGINALS];
+  if (stillsOnly) parts.push(STILLS);
   const params: Param[] = [];
   if (range) {
     parts.push(DATED);
@@ -106,7 +114,7 @@ function topBy(
   range: MonthRange | null,
   limit: number
 ): NameCount[] {
-  const w = where(range);
+  const w = where(range, { stillsOnly: true });
   return db.all<NameCount>(
     `SELECT COALESCE(NULLIF(TRIM(t.value), ''), '${UNKNOWN}') AS name, COUNT(*) AS count
      FROM ${photos(db)} LEFT JOIN ${table} AS t ON t.id_local = exif.${ref}
@@ -116,12 +124,22 @@ function topBy(
   );
 }
 
-/** Top cameras by photo count. Missing/blank camera is bucketed as [Unknown]. */
+/** Videos in the range: left out of camera, lens and ISO charts. */
+export function getVideoCount(db: Db, range: MonthRange | null): number {
+  const w = where(range);
+  const [row] = db.all<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM Adobe_images AS i ${w.sql} AND i.fileFormat = 'VIDEO'`,
+    w.params
+  );
+  return row.n;
+}
+
+/** Top cameras by photo count (stills only). Missing/blank camera is bucketed as [Unknown]. */
 export function getTopCameras(db: Db, range: MonthRange | null, limit = 15): NameCount[] {
   return topBy(db, 'AgInternedExifCameraModel', 'cameraModelRef', range, limit);
 }
 
-/** Top lenses by photo count. Missing/blank lens is bucketed as [Unknown]. */
+/** Top lenses by photo count (stills only). Missing/blank lens is bucketed as [Unknown]. */
 export function getTopLenses(db: Db, range: MonthRange | null, limit = 15): NameCount[] {
   return topBy(db, 'AgInternedExifLens', 'lensRef', range, limit);
 }
@@ -131,9 +149,9 @@ export interface IsoHistogram {
   unknown: number;
 }
 
-/** Photos per full-stop ISO bin; photos without a positive ISO count as unknown. */
+/** Stills per full-stop ISO bin; photos without a positive ISO count as unknown. */
 export function getIsoHistogram(db: Db, range: MonthRange | null): IsoHistogram {
-  const w = where(range);
+  const w = where(range, { stillsOnly: true });
   const rows = db.all<{ iso: number | null; count: number }>(
     `SELECT exif.isoSpeedRating AS iso, COUNT(*) AS count FROM ${photos(db)} ${w.sql} GROUP BY 1`,
     w.params

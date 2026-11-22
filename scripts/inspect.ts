@@ -16,6 +16,7 @@ import {
   getTimeline,
   getTopCameras,
   getTopLenses,
+  getVideoCount,
 } from '../src/catalog/queries.ts';
 import { isMonth, type MonthRange } from '../src/catalog/transforms.ts';
 import { detectExifLink, diagnose, healthWarnings } from '../src/catalog/diagnose.ts';
@@ -99,6 +100,9 @@ if (range.from && range.to) {
   );
   console.table(Object.fromEntries(tl.map((r) => [r.month, r.count])));
 }
+console.log(
+  `\nCamera, lens and ISO count stills only (${getVideoCount(db, range)} videos left out).`
+);
 console.log('\nTop cameras:');
 console.table(getTopCameras(db, range));
 console.log('\nTop lenses:');
