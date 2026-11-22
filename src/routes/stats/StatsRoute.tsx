@@ -21,7 +21,7 @@ function StatsRoute() {
     <div className="p-6">
       <h1 className="text-2xl font-semibold mb-4">Stats</h1>
       {err ? (
-        <div className="text-red-600">{err}</div>
+        <div className="text-danger-fg">{err}</div>
       ) : (
         <pre className="text-sm">Smoke test: {JSON.stringify({ ok })}</pre>
       )}

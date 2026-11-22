@@ -56,7 +56,7 @@ function Load() {
     <div className="mx-auto max-w-xl p-6">
       <h1 className="text-2xl font-semibold mb-4">Load Catalog</h1>
 
-      <label className="block border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer hover:bg-neutral-50">
+      <label className="block border-2 border-dashed border-line-strong rounded-2xl p-6 text-center cursor-pointer hover:bg-surface">
         <input
           type="file"
           accept=".lrcat,.db,application/octet-stream,application/x-sqlite3"
@@ -66,11 +66,11 @@ function Load() {
         <div className="text-sm">
           Drag & drop or click to choose a <strong>.lrcat</strong> / <strong>.db</strong>
         </div>
-        {fileName && <div className="mt-2 text-xs text-gray-500">Selected: {fileName}</div>}
+        {fileName && <div className="mt-2 text-xs text-muted">Selected: {fileName}</div>}
       </label>
 
       <div
-        className="mt-4 h-24 rounded-xl border flex items-center justify-center text-sm text-gray-500"
+        className="mt-4 h-24 rounded-xl border border-line flex items-center justify-center text-sm text-muted"
         onDragOver={(e) => {
           e.preventDefault();
         }}
@@ -83,7 +83,7 @@ function Load() {
       </div>
 
       {status === 'warn' && pendingFile && (
-        <div className="mt-4 rounded-xl border p-4 bg-amber-50">
+        <div className="mt-4 rounded-xl border border-warn-line p-4 bg-warn-bg">
           <div className="font-medium">Large file detected</div>
           <p className="text-sm mt-1">
             This file is {Math.round(pendingFile.size / (1024 * 1024))} MB. Processing may use
@@ -91,7 +91,7 @@ function Load() {
           </p>
           <div className="mt-3 flex gap-2">
             <button
-              className="px-3 py-1.5 rounded-lg bg-gray-200"
+              className="px-3 py-1.5 rounded-lg border border-line bg-surface"
               onClick={() => {
                 setPendingFile(null);
                 setStatus('idle');
@@ -100,7 +100,7 @@ function Load() {
               Cancel
             </button>
             <button
-              className="px-3 py-1.5 rounded-lg bg-black text-white"
+              className="px-3 py-1.5 rounded-lg bg-fg text-bg"
               onClick={() => proceedInit(pendingFile)}
             >
               Proceed anyway
@@ -110,13 +110,13 @@ function Load() {
       )}
 
       {status === 'init' && (
-        <div className="mt-4 rounded-xl border p-4 bg-blue-50">
+        <div className="mt-4 rounded-xl border border-info-line p-4 bg-info-bg">
           Initializing… (loading sql-wasm.wasm and opening catalog)
         </div>
       )}
 
       {status === 'error' && (
-        <div className="mt-4 rounded-xl border p-4 bg-red-50">
+        <div className="mt-4 rounded-xl border border-danger-line p-4 bg-danger-bg">
           <div className="font-medium">Couldn’t load that file</div>
           <p className="text-sm mt-1">
             {error} Ensure the file is a Lightroom catalog (.lrcat/.db).

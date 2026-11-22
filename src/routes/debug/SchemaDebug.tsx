@@ -111,7 +111,7 @@ export default function SchemaDebug() {
     summary?.distinct ? ((n / summary.distinct) * 100).toFixed(1) : '0.0';
 
   return (
-    <div className="rounded-lg border border-neutral-200 p-3">
+    <div className="rounded-lg border border-line p-3">
       <h1 className="mb-2 text-lg font-semibold">Schema debug</h1>
       <label className="mb-3 flex items-center gap-2 text-sm">
         <input
@@ -121,7 +121,7 @@ export default function SchemaDebug() {
         />
         Hide {UNKNOWN_LABEL} from Top-15 lists
       </label>
-      {error && <div className="mb-3 text-red-600">{error}</div>}
+      {error && <div className="mb-3 text-danger-fg">{error}</div>}
       {!master && !error && <div className="text-sm opacity-70">Scanning…</div>}
       {master && (
         <>

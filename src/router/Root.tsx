@@ -1,5 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { Link, Outlet } from '@tanstack/react-router';
+import ThemeToggle from '@/router/ThemeToggle';
 import '@/styles.css';
 
 // Router devtools are dev-only; production builds drop this branch and its chunk.
@@ -14,23 +15,24 @@ const RouterDevtools = import.meta.env.DEV
 export default function Root() {
   return (
     <div className="min-h-dvh">
-      <header className="border-b border-neutral-200">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+      <header className="border-b border-line">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-3">
           <Link to="/load" className="font-semibold">
             Lightroom Charts
           </Link>
-          <nav className="flex gap-4 text-sm">
-            <Link to="/load" className="text-neutral-600 hover:text-neutral-900">
+          <nav className="flex items-center gap-4 text-sm">
+            <Link to="/load" className="text-muted hover:text-fg">
               Load
             </Link>
-            <Link to="/stats" className="text-neutral-600 hover:text-neutral-900">
+            <Link to="/stats" className="text-muted hover:text-fg">
               Stats
             </Link>
             {import.meta.env.DEV && (
-              <a href="#/debug" className="text-neutral-600 hover:text-neutral-900">
+              <a href="#/debug" className="text-muted hover:text-fg">
                 Debug
               </a>
             )}
+            <ThemeToggle />
           </nav>
         </div>
       </header>
