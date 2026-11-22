@@ -3,9 +3,11 @@ import initSqlJs, { type SqlJsStatic } from 'sql.js';
 import { fromSqlJs, type Db } from './db.ts';
 import { buildCatalog, demoPhotos, type FixturePhoto } from './fixtures.ts';
 import {
+  getExposure,
   getIsoHistogram,
   getSummary,
   getTimeline,
+  getTimeOfWeek,
   getTopCameras,
   getTopLenses,
   getVideoCount,
@@ -152,5 +154,71 @@ describe('consistency on a larger catalog', () => {
     expect(cams).toBe(s.photos - s.videos);
     expect(isoTotal).toBe(s.photos - s.videos);
     expect(getVideoCount(db, null)).toBe(s.videos);
+  });
+});
+
+describe('getExposure', () => {
+  // Values as Lightroom stores them: APEX aperture/shutter, focal in mm.
+  const SHOTS: FixturePhoto[] = [
+    { captureTime: '2025-01-06T09:00:00', aperture: 2.9709, shutter: 7.6439, focal: 24 }, // f/2.8, 1/200, 24mm
+    { captureTime: '2025-01-06T10:00:00', aperture: 4.9709, shutter: 7.9658, focal: 55 }, // f/5.6, 1/250, 55mm
+    { captureTime: '2025-01-07T21:00:00', aperture: 1.696, shutter: 0, focal: 50 }, // f/1.8, 1s, 50mm
+    { captureTime: '2025-02-01T12:00:00', aperture: null, shutter: null, focal: null }, // no exposure data
+    { captureTime: '2025-02-01T12:00:00', video: true, aperture: 3, shutter: 6, focal: 24 }, // video: excluded
+    { captureTime: '2025-02-01T12:00:00', virtualOf: 0, aperture: 3, shutter: 6, focal: 24 }, // copy: excluded
+  ];
+  const count = (h: { bins: { label: string; count: number }[] }, label: string) =>
+    h.bins.find((b) => b.label === label)?.count;
+
+  it('bins stills by nearest stop / focal range; unknown counts missing values', () => {
+    const e = getExposure(open(SHOTS), null);
+    expect(count(e.aperture, 'f/2.8')).toBe(1);
+    expect(count(e.aperture, 'f/5.6')).toBe(1);
+    expect(count(e.aperture, 'f/2')).toBe(1);
+    expect(e.aperture.unknown).toBe(1);
+    expect(count(e.shutter, '1/125–1/250')).toBe(2);
+    expect(count(e.shutter, '1s or longer')).toBe(1);
+    expect(e.shutter.unknown).toBe(1);
+    expect(count(e.focal, '17–24')).toBe(1);
+    expect(count(e.focal, '36–50')).toBe(1);
+    expect(count(e.focal, '51–85')).toBe(1);
+    expect(e.focal.unknown).toBe(1);
+  });
+
+  it('every histogram accounts for exactly the stills in range', () => {
+    const e = getExposure(open(SHOTS), { from: '2025-01', to: '2025-01' });
+    for (const h of [e.aperture, e.shutter, e.focal]) {
+      expect(h.bins.reduce((n, b) => n + b.count, 0) + h.unknown).toBe(3);
+    }
+  });
+});
+
+describe('getTimeOfWeek', () => {
+  it('counts by local hour and Monday-first weekday, including videos', () => {
+    // 2025-01-06 is a Monday, 2025-01-07 a Tuesday, 2025-02-01 a Saturday.
+    const t = getTimeOfWeek(
+      open([
+        { captureTime: '2025-01-06T09:15:00' },
+        { captureTime: '2025-01-06T09:59:59.99' },
+        { captureTime: '2025-01-07T21:00:00+02:00' }, // zone suffix ignored: hour as written
+        { captureTime: '2025-02-01T00:30:00', video: true },
+        { captureTime: null }, // undated: excluded
+        { captureTime: '2025-01-06T09:00:00', virtualOf: 0 }, // copy: excluded
+      ]),
+      null
+    );
+    expect(t.hours[9]).toBe(2);
+    expect(t.hours[21]).toBe(1);
+    expect(t.hours[0]).toBe(1);
+    expect(t.hours.reduce((a, b) => a + b, 0)).toBe(4);
+    expect(t.weekdays).toEqual([2, 1, 0, 0, 0, 1, 0]); // Mon, Tue, …, Sat
+  });
+
+  it('respects the month range', () => {
+    const t = getTimeOfWeek(
+      open([{ captureTime: '2025-01-06T09:00:00' }, { captureTime: '2025-02-03T09:00:00' }]),
+      { from: '2025-02', to: '2025-02' }
+    );
+    expect(t.hours[9]).toBe(1);
   });
 });

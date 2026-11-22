@@ -3,10 +3,10 @@ import { monthLabel } from '@/charts/options.ts';
 
 function Tile({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="min-w-0 rounded-xl border border-line px-4 py-3">
-      <dt className="text-xs text-muted">{label}</dt>
-      <dd className="mt-0.5 truncate text-xl font-semibold tabular-nums">{value}</dd>
-      {note && <dd className="mt-0.5 truncate text-xs text-muted">{note}</dd>}
+    <div className="min-w-0 rounded-2xl border border-line px-4 py-3 sm:px-5 sm:py-4">
+      <dt className="text-sm text-muted">{label}</dt>
+      <dd className="mt-1 truncate text-2xl font-semibold tabular-nums sm:text-3xl">{value}</dd>
+      {note && <dd className="mt-1 truncate text-sm text-muted">{note}</dd>}
     </div>
   );
 }
@@ -25,7 +25,7 @@ export default function SummaryTiles({ summary }: { summary: Summary }) {
 
   return (
     <section aria-label="Whole catalog">
-      <dl className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <dl className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
         <Tile label="Photos" value={n(summary.photos)} note={extras || undefined} />
         <Tile
           label="Date span"

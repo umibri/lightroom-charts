@@ -1,20 +1,15 @@
-import { useCallback, useMemo, useSyncExternalStore, type ReactNode } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useQuery } from '@tanstack/react-query';
 import { catalog } from '@/lib/dbClient';
 import { useOpenCatalog } from '@/state/catalogStore';
 import { resolveRange, type StatsSearch } from '@/catalog/filters.ts';
-import { monthOf } from '@/catalog/transforms.ts';
+import { HOURS, monthOf, WEEKDAYS } from '@/catalog/transforms.ts';
 import EChart from '@/charts/EChart';
-import { useThemeColors } from '@/charts/theme.ts';
-import {
-  isoOption,
-  monthLabel,
-  rankingHeight,
-  rankingOption,
-  timelineOption,
-} from '@/charts/options.ts';
+import { CHART_TEXT_NARROW, CHART_TEXT_WIDE, useThemeColors } from '@/charts/theme.ts';
+import { monthLabel, rankingHeight, rankingOption, timelineOption } from '@/charts/options.ts';
 import DateFilter from './DateFilter';
+import { BinsCard, Card, Status } from './Card';
 import DataTable from '@/charts/DataTable';
 import SummaryTiles from './SummaryTiles';
 import { healthWarnings } from '@/catalog/diagnose.ts';
@@ -31,28 +26,17 @@ function useWide(): boolean {
   );
 }
 
-function Card({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
-  return (
-    <section className="min-w-0 rounded-xl border border-line p-4">
-      <div className="mb-2 flex items-baseline justify-between gap-2">
-        <h2 className="font-medium">{title}</h2>
-        {note && <span className="text-xs text-muted">{note}</span>}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Status({ children }: { children: ReactNode }) {
-  return <p className="py-8 text-center text-sm text-muted">{children}</p>;
-}
-
 export default function StatsRoute() {
   const open = useOpenCatalog()!; // guaranteed by the route's beforeLoad
   const search = useSearch({ from: '/stats' });
   const navigate = useNavigate({ from: '/stats' });
-  const colors = useThemeColors();
+  const themeColors = useThemeColors();
   const wide = useWide();
+  // Theme colors plus chart text sizes for this screen width.
+  const colors = useMemo(
+    () => ({ ...themeColors, text: wide ? CHART_TEXT_WIDE : CHART_TEXT_NARROW }),
+    [themeColors, wide]
+  );
 
   const today = monthOf(new Date());
   const { summary, generation } = open;
@@ -90,6 +74,16 @@ export default function StatsRoute() {
     enabled,
   });
 
+  const exposure = useQuery({
+    queryKey: ['exposure', ...key],
+    queryFn: () => catalog().exposure(range),
+    enabled,
+  });
+  const timeOfWeek = useQuery({
+    queryKey: ['timeOfWeek', ...key],
+    queryFn: () => catalog().timeOfWeek(range),
+    enabled,
+  });
   const videos = useQuery({
     queryKey: ['videos', ...key],
     queryFn: () => catalog().videoCount(range),
@@ -97,12 +91,13 @@ export default function StatsRoute() {
   });
   // Shown on the gear/ISO charts, which count stills only.
   const videoNote = videos.data ? `${videos.data.toLocaleString()} videos not included` : null;
+  const unknownNote = (n: number | undefined) => (n ? `${n.toLocaleString()} unknown` : null);
   const joinNotes = (...parts: (string | null | undefined)[]) =>
     parts.filter(Boolean).join(' · ') || undefined;
 
   const total = timeline.data?.reduce((n, r) => n + r.count, 0);
   const empty = total === 0;
-  const labelWidth = wide ? 200 : 110;
+  const labelWidth = wide ? 200 : 125;
 
   const timelineOpt = useMemo(
     () => (timeline.data ? timelineOption(timeline.data, colors) : null),
@@ -116,19 +111,15 @@ export default function StatsRoute() {
     () => (cameras.data ? rankingOption(cameras.data, colors, labelWidth) : null),
     [cameras.data, colors, labelWidth]
   );
-  const isoOpt = useMemo(
-    () => (iso.data ? isoOption(iso.data.bins, colors) : null),
-    [iso.data, colors]
-  );
 
   const rangeText = range ? `${monthLabel(range.from)} – ${monthLabel(range.to)}` : 'No dates';
-  const failed = [timeline, lenses, cameras, iso].some((q) => q.isError);
+  const failed = [timeline, lenses, cameras, iso, exposure, timeOfWeek].some((q) => q.isError);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5 sm:space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <h1 className="flex items-center gap-2 text-2xl font-semibold sm:text-3xl">
             Stats
             {open.demo && (
               <span className="rounded-full border border-warn-line bg-warn-bg px-2 py-0.5 text-xs font-medium">
@@ -171,7 +162,7 @@ export default function StatsRoute() {
       ))}
 
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-        <span className="text-sm text-muted">Charts below use this date range</span>
+        <span className="text-sm text-muted sm:text-base">Charts below use this date range</span>
         <DateFilter
           key={`${search.range}:${search.from}:${search.to}`}
           search={search}
@@ -199,7 +190,7 @@ export default function StatsRoute() {
             {timelineOpt ? (
               <EChart
                 option={timelineOpt}
-                height={wide ? 260 : 200}
+                height={wide ? 340 : 240}
                 label={`Photos per month, ${rangeText}, ${total ?? 0} photos in total`}
               />
             ) : (
@@ -219,7 +210,7 @@ export default function StatsRoute() {
               <Status>No photos in this date range. Try a wider range.</Status>
             </Card>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2">
+            <div className="grid gap-5 sm:gap-6 lg:grid-cols-2">
               <Card title="Lenses" note={joinNotes('Top 15', videoNote)}>
                 {lensOpt && lenses.data ? (
                   <EChart
@@ -256,33 +247,84 @@ export default function StatsRoute() {
                   />
                 )}
               </Card>
-              <Card
+              <BinsCard
                 title="ISO"
+                note={joinNotes(unknownNote(iso.data?.unknown), videoNote)}
+                bins={iso.data?.bins}
+                unknown={iso.data?.unknown}
+                shape="columns"
+                colors={colors}
+                labelWidth={labelWidth}
+                columnHeight={wide ? 300 : 240}
+                caption={`ISO, ${rangeText}`}
+                binName="ISO"
+              />
+              <BinsCard
+                title="Aperture"
                 note={joinNotes(
-                  iso.data?.unknown ? `${iso.data.unknown.toLocaleString()} unknown` : null,
+                  'nearest full stop',
+                  unknownNote(exposure.data?.aperture.unknown),
                   videoNote
                 )}
-              >
-                {isoOpt && iso.data ? (
-                  <EChart
-                    option={isoOpt}
-                    height={220}
-                    label={`ISO: ${iso.data.bins.map((b) => `${b.label} ${b.count}`).join(', ')}`}
-                  />
-                ) : (
-                  <Status>Loading…</Status>
+                bins={exposure.data?.aperture.bins}
+                unknown={exposure.data?.aperture.unknown}
+                shape="columns"
+                colors={colors}
+                labelWidth={labelWidth}
+                columnHeight={wide ? 300 : 240}
+                caption={`Aperture, ${rangeText}`}
+                binName="Aperture"
+              />
+              <BinsCard
+                title="Shutter speed"
+                note={joinNotes(unknownNote(exposure.data?.shutter.unknown), videoNote)}
+                bins={exposure.data?.shutter.bins}
+                unknown={exposure.data?.shutter.unknown}
+                shape="bars"
+                colors={colors}
+                labelWidth={labelWidth}
+                columnHeight={wide ? 300 : 240}
+                caption={`Shutter speed, ${rangeText}`}
+                binName="Shutter speed"
+              />
+              <BinsCard
+                title="Focal length"
+                note={joinNotes(
+                  'mm as recorded',
+                  unknownNote(exposure.data?.focal.unknown),
+                  videoNote
                 )}
-                {iso.data && (
-                  <DataTable
-                    caption={`ISO, ${rangeText}`}
-                    columns={['ISO', 'Photos']}
-                    rows={[
-                      ...iso.data.bins.map((b): [string, number] => [b.label, b.count]),
-                      ['Unknown', iso.data.unknown],
-                    ]}
-                  />
-                )}
-              </Card>
+                bins={exposure.data?.focal.bins}
+                unknown={exposure.data?.focal.unknown}
+                shape="bars"
+                colors={colors}
+                labelWidth={labelWidth}
+                columnHeight={wide ? 300 : 240}
+                caption={`Focal length in mm, ${rangeText}`}
+                binName="Focal length (mm)"
+              />
+              <BinsCard
+                title="Time of day"
+                note="hour the photo was taken, local time"
+                wide
+                bins={timeOfWeek.data?.hours.map((count, h) => ({ label: HOURS[h], count }))}
+                shape="many-columns"
+                colors={colors}
+                labelWidth={labelWidth}
+                columnHeight={wide ? 300 : 240}
+                caption={`Photos by hour of day, ${rangeText}`}
+                binName="Hour"
+              />
+              <BinsCard
+                title="Day of week"
+                bins={timeOfWeek.data?.weekdays.map((count, d) => ({ label: WEEKDAYS[d], count }))}
+                shape="columns"
+                colors={colors}
+                labelWidth={labelWidth}
+                columnHeight={wide ? 300 : 240}
+                caption={`Photos by day of week, ${rangeText}`}
+                binName="Day"
+              />
             </div>
           )}
         </>

@@ -108,3 +108,73 @@ export function apexToFNumber(av: number): number {
 export function apexToSeconds(tv: number): number {
   return Math.pow(2, -tv);
 }
+
+// --- Exposure and time bins (Phase 5) ---------------------------------------
+// Values come straight from AgHarvestedExifMetadata. Checked against a real
+// Lightroom Classic 13 catalog: aperture and shutterSpeed are APEX values,
+// focalLength is the actual focal length in mm (not 35mm-equivalent).
+
+/** Focal length as recorded (mm), grouped by common prime/zoom ranges. */
+export const FOCAL_BINS = [
+  { label: '≤16', max: 16 },
+  { label: '17–24', max: 24 },
+  { label: '25–35', max: 35 },
+  { label: '36–50', max: 50 },
+  { label: '51–85', max: 85 },
+  { label: '86–135', max: 135 },
+  { label: '136–200', max: 200 },
+  { label: '201+', max: Infinity },
+] as const;
+
+/** Index into FOCAL_BINS, or -1 when there's no usable value. Rounds to whole mm first (24.4 → 24). */
+export function focalBin(mm: number | null | undefined): number {
+  if (typeof mm !== 'number' || !(mm > 0)) return -1;
+  const r = Math.round(mm);
+  return FOCAL_BINS.findIndex((b) => r <= b.max);
+}
+
+/** Aperture by nearest full stop: Av rounded to an integer, clamped to f/1.4…f/16+. */
+export const APERTURE_BINS = [
+  { label: '≤f/1.4' }, // Av ≤ 1
+  { label: 'f/2' }, // Av 2
+  { label: 'f/2.8' }, // Av 3
+  { label: 'f/4' },
+  { label: 'f/5.6' },
+  { label: 'f/8' },
+  { label: 'f/11' },
+  { label: 'f/16+' }, // Av ≥ 8
+] as const;
+
+export function apertureBin(av: number | null | undefined): number {
+  if (typeof av !== 'number' || !Number.isFinite(av) || av <= 0) return -1;
+  const stop = Math.min(8, Math.max(1, Math.round(av)));
+  return stop - 1;
+}
+
+/** Shutter speed groups by nearest full stop of the APEX Tv value. */
+export const SHUTTER_BINS = [
+  { label: '1s or longer', maxStop: 0 },
+  { label: '1/2–1/15', maxStop: 4 },
+  { label: '1/30–1/60', maxStop: 6 },
+  { label: '1/125–1/250', maxStop: 8 },
+  { label: '1/500–1/1000', maxStop: 10 },
+  { label: '1/2000+', maxStop: Infinity },
+] as const;
+
+/** Tv 0 is a genuine 1 s exposure (seen in real catalogs), so only non-numbers are unknown. */
+export function shutterBin(tv: number | null | undefined): number {
+  if (typeof tv !== 'number' || !Number.isFinite(tv)) return -1;
+  const stop = Math.round(tv);
+  return SHUTTER_BINS.findIndex((b) => stop <= b.maxStop);
+}
+
+/** Hour labels 00–23 (local wall-clock time as Lightroom stores it). */
+export const HOURS = Array.from({ length: 24 }, (_, h) => String(h).padStart(2, '0'));
+
+/** Monday-first, matching most calendars outside the US. */
+export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as const;
+
+/** SQLite strftime('%w') gives 0 = Sunday; convert to a Monday-first index. */
+export function mondayFirst(sqliteWeekday: number): number {
+  return (sqliteWeekday + 6) % 7;
+}

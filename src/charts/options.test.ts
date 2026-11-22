@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { isoOption, monthLabel, rankingHeight, rankingOption, timelineOption } from './options.ts';
+import {
+  columnOption,
+  monthLabel,
+  rankingHeight,
+  rankingOption,
+  timelineOption,
+} from './options.ts';
 
 const colors = {
   fg: '#000',
@@ -49,7 +55,7 @@ describe('chart options', () => {
   });
 
   it('ISO bins stay low to high', () => {
-    const o = isoOption(
+    const o = columnOption(
       [
         { label: '≤100', count: 1 },
         { label: '200', count: 2 },
@@ -60,7 +66,46 @@ describe('chart options', () => {
   });
 
   it('ranking height grows with rows and has a floor', () => {
-    expect(rankingHeight(0)).toBe(120);
-    expect(rankingHeight(15)).toBe(28 * 15 + 24);
+    expect(rankingHeight(0)).toBe(140);
+    expect(rankingHeight(15)).toBe(34 * 15 + 28);
+  });
+});
+
+describe('column labels', () => {
+  type Axis = { xAxis: { axisLabel: { interval?: number; hideOverlap?: boolean } } };
+  it('shows every label by default, thins labels when asked (24 hours)', () => {
+    const bins = [{ label: '00', count: 1 }];
+    const all = columnOption(bins, colors) as unknown as Axis;
+    expect(all.xAxis.axisLabel.interval).toBe(0);
+    const thin = columnOption(bins, colors, { everyLabel: false }) as unknown as Axis;
+    expect(thin.xAxis.axisLabel.interval).toBeUndefined();
+    expect(thin.xAxis.axisLabel.hideOverlap).toBe(true);
+  });
+});
+
+describe('chart text sizes', () => {
+  type T = { textStyle: { fontSize: number }; xAxis: { axisLabel: { fontSize: number } } };
+  const bins = [{ label: 'f/2.8', count: 1 }];
+  it('defaults to the wide sizes and follows a narrow override', () => {
+    const wide = columnOption(bins, colors) as unknown as T;
+    expect(wide.textStyle.fontSize).toBe(14);
+    expect(wide.xAxis.axisLabel.fontSize).toBe(13); // dense: every label shown
+    const narrow = columnOption(bins, { ...colors, text: { base: 14, dense: 12 } }) as unknown as T;
+    expect(narrow.textStyle.fontSize).toBe(14);
+    expect(narrow.xAxis.axisLabel.fontSize).toBe(12);
+  });
+});
+
+describe('chart font family', () => {
+  type T = { textStyle: { fontFamily: string } };
+  it('uses a concrete font family, never a CSS keyword like inherit', () => {
+    const o = columnOption([{ label: 'a', count: 1 }], colors) as unknown as T;
+    expect(o.textStyle.fontFamily).toBe('sans-serif');
+    const withFont = columnOption([{ label: 'a', count: 1 }], {
+      ...colors,
+      font: 'system-ui, sans-serif',
+    }) as unknown as T;
+    expect(withFont.textStyle.fontFamily).toBe('system-ui, sans-serif');
+    expect(withFont.textStyle.fontFamily).not.toMatch(/inherit|initial|unset/);
   });
 });

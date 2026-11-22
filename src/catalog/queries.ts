@@ -1,7 +1,14 @@
 import type { Db, Param } from './db.ts';
 import {
+  APERTURE_BINS,
+  apertureBin,
+  FOCAL_BINS,
+  focalBin,
   ISO_BINS,
   isoBin,
+  mondayFirst,
+  SHUTTER_BINS,
+  shutterBin,
   zeroFillMonths,
   type Month,
   type MonthCount,
@@ -163,4 +170,78 @@ export function getIsoHistogram(db: Db, range: MonthRange | null): IsoHistogram 
     else unknown += r.count;
   }
   return { bins, unknown };
+}
+
+// --- Exposure and time charts (Phase 5) -------------------------------------
+
+export interface Histogram {
+  bins: { label: string; count: number }[];
+  /** Stills with no usable value for this chart. */
+  unknown: number;
+}
+
+/** Group by the raw column value in SQL, then bin in JS with a tested rule. */
+function binned(
+  db: Db,
+  range: MonthRange | null,
+  column: string,
+  labels: readonly { label: string }[],
+  binOf: (v: number | null) => number
+): Histogram {
+  const w = where(range, { stillsOnly: true });
+  const rows = db.all<{ v: number | null; count: number }>(
+    `SELECT exif.${column} AS v, COUNT(*) AS count FROM ${photos(db)} ${w.sql} GROUP BY 1`,
+    w.params
+  );
+  const bins = labels.map((b) => ({ label: b.label, count: 0 }));
+  let unknown = 0;
+  for (const r of rows) {
+    const i = binOf(r.v);
+    if (i < 0) unknown += r.count;
+    else bins[i].count += r.count;
+  }
+  return { bins, unknown };
+}
+
+export interface Exposure {
+  focal: Histogram;
+  aperture: Histogram;
+  shutter: Histogram;
+}
+
+/** Focal length, aperture and shutter speed distributions (stills only). */
+export function getExposure(db: Db, range: MonthRange | null): Exposure {
+  return {
+    focal: binned(db, range, 'focalLength', FOCAL_BINS, focalBin),
+    aperture: binned(db, range, 'aperture', APERTURE_BINS, apertureBin),
+    shutter: binned(db, range, 'shutterSpeed', SHUTTER_BINS, shutterBin),
+  };
+}
+
+export interface TimeOfWeek {
+  /** Photos per hour 00–23, from the capture time as written (local time). */
+  hours: number[];
+  /** Photos per weekday, Monday first. */
+  weekdays: number[];
+}
+
+/** When photos were taken: hour of day and day of week. Includes videos, like the timeline. */
+export function getTimeOfWeek(db: Db, range: MonthRange | null): TimeOfWeek {
+  const w = where(range ?? { from: null, to: null });
+  const hours = new Array(24).fill(0);
+  const weekdays = new Array(7).fill(0);
+  const rows = db.all<{ h: string; wd: string | null; count: number }>(
+    `SELECT substr(i.captureTime, 12, 2) AS h,
+            strftime('%w', substr(i.captureTime, 1, 10)) AS wd,
+            COUNT(*) AS count
+     FROM Adobe_images AS i ${w.sql}
+     GROUP BY 1, 2`,
+    w.params
+  );
+  for (const r of rows) {
+    const h = Number(r.h);
+    if (/^\d\d$/.test(r.h ?? '') && h >= 0 && h <= 23) hours[h] += r.count;
+    if (r.wd != null) weekdays[mondayFirst(Number(r.wd))] += r.count;
+  }
+  return { hours, weekdays };
 }
