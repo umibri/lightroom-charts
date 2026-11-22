@@ -6,7 +6,7 @@ import { useOpenCatalog } from '@/state/catalogStore';
 import { resolveRange, type StatsSearch } from '@/catalog/filters.ts';
 import { HOURS, monthOf, WEEKDAYS } from '@/catalog/transforms.ts';
 import EChart from '@/charts/EChart';
-import { useThemeColors } from '@/charts/theme.ts';
+import { CHART_TEXT_NARROW, CHART_TEXT_WIDE, useThemeColors } from '@/charts/theme.ts';
 import { monthLabel, rankingHeight, rankingOption, timelineOption } from '@/charts/options.ts';
 import DateFilter from './DateFilter';
 import { BinsCard, Card, Status } from './Card';
@@ -30,8 +30,13 @@ export default function StatsRoute() {
   const open = useOpenCatalog()!; // guaranteed by the route's beforeLoad
   const search = useSearch({ from: '/stats' });
   const navigate = useNavigate({ from: '/stats' });
-  const colors = useThemeColors();
+  const themeColors = useThemeColors();
   const wide = useWide();
+  // Theme colors plus chart text sizes for this screen width.
+  const colors = useMemo(
+    () => ({ ...themeColors, text: wide ? CHART_TEXT_WIDE : CHART_TEXT_NARROW }),
+    [themeColors, wide]
+  );
 
   const today = monthOf(new Date());
   const { summary, generation } = open;
@@ -92,7 +97,7 @@ export default function StatsRoute() {
 
   const total = timeline.data?.reduce((n, r) => n + r.count, 0);
   const empty = total === 0;
-  const labelWidth = wide ? 200 : 110;
+  const labelWidth = wide ? 200 : 125;
 
   const timelineOpt = useMemo(
     () => (timeline.data ? timelineOption(timeline.data, colors) : null),

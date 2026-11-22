@@ -1,5 +1,7 @@
 import type { EChartsCoreOption } from 'echarts/core';
-import type { ThemeColors } from './theme.ts';
+import { CHART_TEXT_WIDE, type ThemeColors } from './theme.ts';
+
+const size = (c: ThemeColors) => c.text ?? CHART_TEXT_WIDE;
 import type { MonthCount } from '@/catalog/transforms.ts';
 import type { NameCount } from '@/catalog/queries.ts';
 
@@ -14,13 +16,13 @@ function base(c: ThemeColors) {
   return {
     animationDuration: 300,
     // Chart text is in px (the root font size doesn't reach the canvas).
-    textStyle: { color: c.muted, fontFamily: 'inherit', fontSize: 13 },
+    textStyle: { color: c.muted, fontFamily: c.font ?? 'sans-serif', fontSize: size(c).base },
     tooltip: {
       trigger: 'axis',
       axisPointer: { type: 'shadow' },
       backgroundColor: c.surface,
       borderColor: c.line,
-      textStyle: { color: c.fg, fontSize: 13 },
+      textStyle: { color: c.fg, fontFamily: c.font ?? 'sans-serif', fontSize: size(c).base },
     },
   };
 }
@@ -28,7 +30,7 @@ function base(c: ThemeColors) {
 const valueAxis = (c: ThemeColors) => ({
   type: 'value',
   minInterval: 1,
-  axisLabel: { color: c.muted, fontSize: 13 },
+  axisLabel: { color: c.muted, fontSize: size(c).base },
   splitLine: { lineStyle: { color: c.line } },
 });
 
@@ -40,7 +42,7 @@ export function timelineOption(rows: MonthCount[], c: ThemeColors): EChartsCoreO
     xAxis: {
       type: 'category',
       data: rows.map((r) => monthLabel(r.month)),
-      axisLabel: { color: c.muted, hideOverlap: true, fontSize: 13 },
+      axisLabel: { color: c.muted, hideOverlap: true, fontSize: size(c).base },
       axisLine: { lineStyle: { color: c.line } },
       axisTick: { show: false },
     },
@@ -77,7 +79,7 @@ export function rankingOption(
     yAxis: {
       type: 'category',
       data: top.map((r) => r.name),
-      axisLabel: { color: c.fg, width: labelWidth, overflow: 'truncate', fontSize: 13 },
+      axisLabel: { color: c.fg, width: labelWidth, overflow: 'truncate', fontSize: size(c).base },
       axisLine: { lineStyle: { color: c.line } },
       axisTick: { show: false },
     },
@@ -88,7 +90,7 @@ export function rankingOption(
         data: top.map((r) => r.count),
         itemStyle: { color: c.chart, borderRadius: [0, 4, 4, 0] },
         barMaxWidth: 18,
-        label: { show: true, position: 'right', color: c.muted, fontSize: 13 },
+        label: { show: true, position: 'right', color: c.muted, fontSize: size(c).base },
       },
     ],
   };
@@ -109,8 +111,8 @@ export function columnOption(
       // Few bins: show every label (ECharts would skip alternate ones on phones).
       // Many bins (24 hours): let ECharts thin labels that would overlap.
       axisLabel: everyLabel
-        ? { color: c.muted, interval: 0, fontSize: 12 }
-        : { color: c.muted, hideOverlap: true, fontSize: 12 },
+        ? { color: c.muted, interval: 0, fontSize: size(c).dense }
+        : { color: c.muted, hideOverlap: true, fontSize: size(c).base },
       axisLine: { lineStyle: { color: c.line } },
       axisTick: { show: false },
     },
@@ -129,5 +131,5 @@ export function columnOption(
 
 /** Number of rows to give a ranking chart enough height per bar. */
 export function rankingHeight(n: number): number {
-  return Math.max(120, 28 * Math.max(n, 1) + 24);
+  return Math.max(120, 30 * Math.max(n, 1) + 24);
 }
