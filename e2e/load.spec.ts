@@ -68,7 +68,8 @@ test('demo mode opens sample data with a visible badge', async ({ page }) => {
   await page.getByRole('button', { name: 'Try with sample data' }).click();
   await expect(page).toHaveURL(/#\/stats\?range=24m/);
   await expect(page.getByText('Demo data')).toBeVisible();
-  await expect(page.getByText('Demo catalog · 3,000 photos')).toBeVisible();
+  await expect(page.getByText('Demo catalog', { exact: true })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Whole catalog' })).toContainText('3,000');
   await page.getByRole('button', { name: '12 months' }).click();
   await expect(page).toHaveURL(/range=12m/);
 });

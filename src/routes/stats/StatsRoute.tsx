@@ -16,6 +16,7 @@ import {
 } from '@/charts/options.ts';
 import DateFilter from './DateFilter';
 import DataTable from '@/charts/DataTable';
+import SummaryTiles from './SummaryTiles';
 
 const WIDE = '(min-width: 640px)';
 function useWide(): boolean {
@@ -125,9 +126,15 @@ export default function StatsRoute() {
             )}
           </h1>
           <p className="truncate text-sm text-muted" title={open.fileName}>
-            {open.fileName} · {summary.photos.toLocaleString()} photos
+            {open.fileName}
           </p>
         </div>
+      </div>
+
+      <SummaryTiles summary={summary} />
+
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
+        <span className="text-sm text-muted">Charts below use this date range</span>
         <DateFilter
           key={`${search.range}:${search.from}:${search.to}`}
           search={search}

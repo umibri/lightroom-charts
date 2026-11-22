@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { isoOption, monthLabel, rankingHeight, rankingOption, timelineOption } from './options.ts';
 
-const colors = { fg: '#000', muted: '#555', line: '#ddd', accent: '#00f', surface: '#eee' };
+const colors = {
+  fg: '#000',
+  muted: '#555',
+  line: '#ddd',
+  accent: '#00f',
+  chart: '#00f',
+  surface: '#eee',
+};
 
 // The option objects are loosely typed; read the bits we assert on.
 type Opt = {

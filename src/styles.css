@@ -15,6 +15,8 @@
   --line: #e2e2e7;
   --line-strong: #a9aab3;
   --accent: #1d5fd1;
+  /* Chart marks. Validated (dataviz) for lightness band + 3:1 vs surface. */
+  --chart: #1d5fd1;
   --info-bg: #eef4ff;
   --info-line: #c6d8fb;
   --warn-bg: #fff6e5;
@@ -45,6 +47,7 @@
     --line: #2d2e34;
     --line-strong: #565862;
     --accent: #6ea2ff;
+    --chart: #4a86ec;
     --info-bg: #142036;
     --info-line: #27416d;
     --warn-bg: #2a2111;
@@ -64,6 +67,7 @@
   --line: #2d2e34;
   --line-strong: #565862;
   --accent: #6ea2ff;
+  --chart: #4a86ec;
   --info-bg: #142036;
   --info-line: #27416d;
   --warn-bg: #2a2111;
@@ -81,6 +85,7 @@
   --color-line: var(--line);
   --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
+  --color-chart: var(--chart);
   --color-info-bg: var(--info-bg);
   --color-info-line: var(--info-line);
   --color-warn-bg: var(--warn-bg);
@@ -92,4 +97,11 @@
 
 body {
   @apply bg-bg text-fg;
+}
+
+/* One visible keyboard focus style for every interactive element. */
+:where(a, button, summary, input, select):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
