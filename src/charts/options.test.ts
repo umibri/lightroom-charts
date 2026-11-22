@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { isoOption, monthLabel, rankingHeight, rankingOption, timelineOption } from './options.ts';
+import {
+  columnOption,
+  monthLabel,
+  rankingHeight,
+  rankingOption,
+  timelineOption,
+} from './options.ts';
 
 const colors = {
   fg: '#000',
@@ -49,7 +55,7 @@ describe('chart options', () => {
   });
 
   it('ISO bins stay low to high', () => {
-    const o = isoOption(
+    const o = columnOption(
       [
         { label: '≤100', count: 1 },
         { label: '200', count: 2 },
@@ -62,5 +68,17 @@ describe('chart options', () => {
   it('ranking height grows with rows and has a floor', () => {
     expect(rankingHeight(0)).toBe(120);
     expect(rankingHeight(15)).toBe(28 * 15 + 24);
+  });
+});
+
+describe('column labels', () => {
+  type Axis = { xAxis: { axisLabel: { interval?: number; hideOverlap?: boolean } } };
+  it('shows every label by default, thins labels when asked (24 hours)', () => {
+    const bins = [{ label: '00', count: 1 }];
+    const all = columnOption(bins, colors) as unknown as Axis;
+    expect(all.xAxis.axisLabel.interval).toBe(0);
+    const thin = columnOption(bins, colors, { everyLabel: false }) as unknown as Axis;
+    expect(thin.xAxis.axisLabel.interval).toBeUndefined();
+    expect(thin.xAxis.axisLabel.hideOverlap).toBe(true);
   });
 });

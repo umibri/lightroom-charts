@@ -56,7 +56,11 @@ export function timelineOption(rows: MonthCount[], c: ThemeColors): EChartsCoreO
   };
 }
 
-/** Horizontal ranking (largest at top). Long names are truncated on the axis. */
+/**
+ * Horizontal bars, first row at the top. Used for rankings (rows sorted by
+ * count) and for ordered bins with long labels (shutter speed, focal length).
+ * Long names are truncated on the axis.
+ */
 export function rankingOption(
   rows: NameCount[],
   c: ThemeColors,
@@ -89,10 +93,11 @@ export function rankingOption(
   };
 }
 
-/** ISO bins left to right, low to high. */
-export function isoOption(
+/** Vertical columns for ordered bins (ISO, aperture, shutter, focal length, hours, weekdays). */
+export function columnOption(
   bins: { label: string; count: number }[],
-  c: ThemeColors
+  c: ThemeColors,
+  { everyLabel = true }: { everyLabel?: boolean } = {}
 ): EChartsCoreOption {
   return {
     ...base(c),
@@ -100,8 +105,11 @@ export function isoOption(
     xAxis: {
       type: 'category',
       data: bins.map((b) => b.label),
-      // Show every bin; ECharts would otherwise skip alternate labels on phones.
-      axisLabel: { color: c.muted, interval: 0, fontSize: 11 },
+      // Few bins: show every label (ECharts would skip alternate ones on phones).
+      // Many bins (24 hours): let ECharts thin labels that would overlap.
+      axisLabel: everyLabel
+        ? { color: c.muted, interval: 0, fontSize: 11 }
+        : { color: c.muted, hideOverlap: true, fontSize: 11 },
       axisLine: { lineStyle: { color: c.line } },
       axisTick: { show: false },
     },

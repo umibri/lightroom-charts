@@ -3,6 +3,15 @@ import {
   addMonths,
   apexToFNumber,
   apexToSeconds,
+  apertureBin,
+  APERTURE_BINS,
+  focalBin,
+  FOCAL_BINS,
+  HOURS,
+  mondayFirst,
+  shutterBin,
+  SHUTTER_BINS,
+  WEEKDAYS,
   isMonth,
   isoBin,
   ISO_BINS,
@@ -130,5 +139,64 @@ describe('APEX conversions', () => {
     expect(apexToSeconds(0)).toBe(1);
     expect(apexToSeconds(8)).toBeCloseTo(1 / 256, 6);
     expect(apexToSeconds(-1)).toBe(2);
+  });
+});
+
+describe('exposure bins (APEX values as stored by Lightroom)', () => {
+  const ap = (av: number | null) =>
+    apertureBin(av) < 0 ? null : APERTURE_BINS[apertureBin(av)].label;
+  const sh = (tv: number | null) =>
+    shutterBin(tv) < 0 ? null : SHUTTER_BINS[shutterBin(tv)].label;
+  const fo = (mm: number | null) => (focalBin(mm) < 0 ? null : FOCAL_BINS[focalBin(mm)].label);
+
+  it('aperture: real catalog values land on the nearest full stop', () => {
+    expect(ap(2.9709)).toBe('f/2.8'); // f/2.8 wide open
+    expect(ap(1.696)).toBe('f/2'); // f/1.8 → nearest full stop
+    expect(ap(4.9709)).toBe('f/5.6');
+    expect(ap(5.3107)).toBe('f/5.6'); // f/6.3
+    expect(ap(5.6556)).toBe('f/8'); // f/7.1
+    expect(ap(8.34)).toBe('f/16+'); // f/18
+    expect(ap(0.5)).toBe('≤f/1.4');
+    expect(ap(null)).toBeNull();
+    expect(ap(0)).toBeNull();
+    expect(apexToFNumber(2.9709)).toBeCloseTo(2.8, 1);
+  });
+
+  it('shutter: real catalog values, including genuine 1s (Tv 0) and long exposures', () => {
+    expect(sh(7.6439)).toBe('1/125–1/250'); // 1/200
+    expect(sh(7.9658)).toBe('1/125–1/250'); // 1/250
+    expect(sh(8.6439)).toBe('1/500–1/1000'); // 1/400 → nearest stop 1/500
+    expect(sh(12.2877)).toBe('1/2000+'); // 1/5000
+    expect(sh(4.9)).toBe('1/30–1/60'); // 1/30
+    expect(sh(0)).toBe('1s or longer');
+    expect(sh(-4.9069)).toBe('1s or longer'); // 30 s
+    expect(sh(null)).toBeNull();
+    expect(apexToSeconds(7.6439)).toBeCloseTo(1 / 200, 4);
+  });
+
+  it('focal length in mm as recorded, rounded to whole mm', () => {
+    expect(fo(4.49)).toBe('≤16'); // drone
+    expect(fo(17)).toBe('17–24');
+    expect(fo(24.4)).toBe('17–24');
+    expect(fo(55)).toBe('51–85');
+    expect(fo(100)).toBe('86–135');
+    expect(fo(300)).toBe('201+');
+    expect(fo(0)).toBeNull();
+    expect(fo(null)).toBeNull();
+  });
+});
+
+describe('time bins', () => {
+  it('has 24 zero-padded hours and Monday-first weekdays', () => {
+    expect(HOURS).toHaveLength(24);
+    expect(HOURS[0]).toBe('00');
+    expect(HOURS[23]).toBe('23');
+    expect(WEEKDAYS[0]).toBe('Mon');
+  });
+
+  it('converts SQLite weekday (0 = Sunday) to Monday-first', () => {
+    expect(mondayFirst(1)).toBe(0); // Monday
+    expect(mondayFirst(0)).toBe(6); // Sunday
+    expect(WEEKDAYS[mondayFirst(4)]).toBe('Thu');
   });
 });

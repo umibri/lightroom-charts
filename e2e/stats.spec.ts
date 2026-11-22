@@ -37,7 +37,17 @@ test('loads a catalog and shows all four charts with correct totals', async ({ p
   await expect(page.getByText('demo.lrcat')).toBeVisible();
   await expect(page.getByRole('region', { name: 'Whole catalog' })).toContainText(fmt(e.photos));
   await expect(timelineNote(page)).toContainText(`· ${fmt(e.m24)}`);
-  for (const name of ['Photos per month', 'Lenses', 'Cameras', 'ISO']) {
+  for (const name of [
+    'Photos per month',
+    'Lenses',
+    'Cameras',
+    'ISO',
+    'Aperture',
+    'Shutter speed',
+    'Focal length',
+    'Time of day',
+    'Day of week',
+  ]) {
     const card = page.locator('section', { has: page.getByRole('heading', { name }) });
     await expect(card.locator('canvas')).toBeVisible();
   }
@@ -106,4 +116,31 @@ test('a catalog where most photos lack EXIF shows a warning', async ({ page }) =
   await load(page, FIXTURES.noExif);
   await expect(page).toHaveURL(/#\/stats/);
   await expect(page.getByRole('alert')).toContainText('75% of photos have no camera or lens data');
+});
+
+test('exposure tables add up to the same stills; time of day has 24 hours', async ({ page }) => {
+  await load(page, FIXTURES.demo);
+  await page.getByRole('button', { name: 'All' }).click();
+  const tableTotal = async (name: string) => {
+    const card = page.locator('section', { has: page.getByRole('heading', { name, exact: true }) });
+    await card.getByText('Show data').click();
+    const cells = await card.locator('tbody tr td:last-child').allInnerTexts();
+    return {
+      rows: cells.length,
+      total: cells.reduce((n, t) => n + Number(t.replace(/,/g, '')), 0),
+    };
+  };
+  const aperture = await tableTotal('Aperture');
+  const shutter = await tableTotal('Shutter speed');
+  const focal = await tableTotal('Focal length');
+  const iso = await tableTotal('ISO');
+  expect(aperture.total).toBeGreaterThan(0);
+  expect(shutter.total).toBe(aperture.total);
+  expect(focal.total).toBe(aperture.total);
+  expect(iso.total).toBe(aperture.total);
+  const hours = await tableTotal('Time of day');
+  expect(hours.rows).toBe(24);
+  const days = await tableTotal('Day of week');
+  expect(days.rows).toBe(7);
+  expect(days.total).toBe(hours.total);
 });

@@ -6,9 +6,11 @@ import wasmUrl from 'sql.js/dist/sql-wasm.wasm?url';
 import { fromSqlJs, type Db, type Param, type Row } from '@/catalog/db.ts';
 import { assertLightroom, CatalogError, checkHeader } from '@/catalog/validate.ts';
 import {
+  getExposure,
   getIsoHistogram,
   getSummary,
   getTimeline,
+  getTimeOfWeek,
   getTopCameras,
   getTopLenses,
   getVideoCount,
@@ -159,6 +161,8 @@ const api = {
   topLenses: (range: MonthRange | null, limit?: number) => getTopLenses(current(), range, limit),
   isoHistogram: (range: MonthRange | null) => getIsoHistogram(current(), range),
   videoCount: (range: MonthRange | null) => getVideoCount(current(), range),
+  exposure: (range: MonthRange | null) => getExposure(current(), range),
+  timeOfWeek: (range: MonthRange | null) => getTimeOfWeek(current(), range),
 
   /** Raw SQL for the dev-only debug page. Not used by product code. */
   query: (sql: string, params: Param[] = []): Row[] => current().all(sql, params),

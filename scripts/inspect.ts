@@ -11,14 +11,16 @@ import initSqlJs from 'sql.js';
 import { fromSqlJs } from '../src/catalog/db.ts';
 import { assertLightroom, checkHeader } from '../src/catalog/validate.ts';
 import {
+  getExposure,
   getIsoHistogram,
   getSummary,
   getTimeline,
+  getTimeOfWeek,
   getTopCameras,
   getTopLenses,
   getVideoCount,
 } from '../src/catalog/queries.ts';
-import { isMonth, type MonthRange } from '../src/catalog/transforms.ts';
+import { HOURS, isMonth, WEEKDAYS, type MonthRange } from '../src/catalog/transforms.ts';
 import { detectExifLink, diagnose, healthWarnings } from '../src/catalog/diagnose.ts';
 
 function arg(name: string): string | null {
@@ -111,5 +113,19 @@ const iso = getIsoHistogram(db, range);
 console.log('\nISO:');
 // An array keeps bin order; an object would sort numeric-looking keys first.
 console.table([...iso.bins, { label: 'unknown', count: iso.unknown }]);
+const ex = getExposure(db, range);
+for (const [name, h] of [
+  ['Aperture (nearest full stop)', ex.aperture],
+  ['Shutter speed', ex.shutter],
+  ['Focal length (mm as recorded)', ex.focal],
+] as const) {
+  console.log(`\n${name}:`);
+  console.table([...h.bins, { label: 'unknown', count: h.unknown }]);
+}
+const tw = getTimeOfWeek(db, range);
+console.log('\nPhotos by hour:');
+console.table(tw.hours.map((count, h) => ({ hour: HOURS[h], count })));
+console.log('\nPhotos by weekday:');
+console.table(tw.weekdays.map((count, d) => ({ day: WEEKDAYS[d], count })));
 console.log(`\nQueries ran in ${(performance.now() - opened).toFixed(0)} ms`);
 raw.close();
