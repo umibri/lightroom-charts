@@ -14,6 +14,23 @@ There is no backend. The catalog is a SQLite database; the app opens it with [sq
 UI (React)  ──Comlink──▶  Web Worker  ──▶  sql.js (WASM SQLite, in-memory copy of the catalog)
 ```
 
+## How photos are counted
+
+The rules live in `src/catalog/` and are covered by tests against synthetic catalogs.
+
+- **Virtual copies are excluded.** They are the same photo (`Adobe_images.masterImage` is set).
+- **Videos are included** in totals and reported separately.
+- **Months come from the capture time as written** (`YYYY-MM` of `captureTime`). Lightroom stores local wall-clock time without a zone, so no timezone conversion is applied.
+- **Photos without a capture date** are counted in the summary but not in timelines or date-filtered views.
+- **Missing or blank camera/lens/ISO** is shown as `[Unknown]`, which sorts after named values on ties.
+- **One EXIF row per photo**, so a photo is never counted twice.
+
+To check against your own catalog, close Lightroom and run `npm run inspect -- path/to/catalog.lrcat`, then compare with Lightroom's Library filter bar (Metadata → Capture Date / Camera / Lens).
+
+## Limits
+
+The whole catalog is held in memory. Opening needs about 2× the file size briefly, then about 1×. A 1 GB catalog opened in under 5 seconds in Chrome in testing; larger catalogs depend on the browser and the device's memory.
+
 ## Tech stack
 
 - **Build/UI:** Vite 8 · React 19 · TypeScript 5.9
@@ -33,15 +50,17 @@ npm install
 npm run dev
 ```
 
-| Script            | What it does                                |
-| ----------------- | ------------------------------------------- |
-| `npm run dev`     | Dev server                                  |
-| `npm run build`   | Typecheck + production build to `dist/`     |
-| `npm run preview` | Serve the production build locally          |
-| `npm test`        | Unit tests (Vitest)                         |
-| `npm run lint`    | ESLint                                      |
-| `npm run format`  | Prettier (write)                            |
-| `npm run verify`  | Lint, format check, tests, build (pre-push) |
+| Script                               | What it does                                             |
+| ------------------------------------ | -------------------------------------------------------- |
+| `npm run dev`                        | Dev server                                               |
+| `npm run build`                      | Typecheck + production build to `dist/`                  |
+| `npm run preview`                    | Serve the production build locally                       |
+| `npm test`                           | Unit tests (Vitest)                                      |
+| `npm run lint`                       | ESLint                                                   |
+| `npm run format`                     | Prettier (write)                                         |
+| `npm run verify`                     | Lint, format check, tests, build (pre-push)              |
+| `npm run inspect -- <file.lrcat>`    | Print the app's numbers for a catalog (same query code)  |
+| `npm run fixture -- <out.lrcat> [n]` | Write a synthetic Lightroom-shaped catalog with n photos |
 
 In dev, `#/debug` shows a schema explorer for the loaded catalog. It is not included in production builds.
 

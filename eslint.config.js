@@ -26,7 +26,7 @@ export default defineConfig([
     languageOptions: { globals: globals.worker },
   },
   {
-    files: ['src/**/*.test.ts', '*.{js,ts}'],
+    files: ['src/**/*.test.ts', '*.{js,ts}', 'scripts/**/*.ts'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: { globals: globals.node },
   },
