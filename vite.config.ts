@@ -22,6 +22,11 @@ export default defineConfig({
   worker: {
     format: 'es',
   },
+  build: {
+    // The lazily loaded Stats chunk is ~505 kB, almost all of it ECharts
+    // (already tree-shaken to bar charts). Warn only if it grows past that.
+    chunkSizeWarningLimit: 600,
+  },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],

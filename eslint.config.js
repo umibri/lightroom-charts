@@ -7,7 +7,7 @@ import prettier from 'eslint-config-prettier';
 import { defineConfig, globalIgnores } from 'eslint/config';
 
 export default defineConfig([
-  globalIgnores(['dist', 'coverage', 'scratch']),
+  globalIgnores(['dist', 'coverage', 'scratch', 'test-results', 'playwright-report']),
   {
     files: ['src/**/*.{ts,tsx}'],
     extends: [
@@ -26,7 +26,7 @@ export default defineConfig([
     languageOptions: { globals: globals.worker },
   },
   {
-    files: ['src/**/*.test.ts', '*.{js,ts}', 'scripts/**/*.ts'],
+    files: ['src/**/*.test.ts', '*.{js,ts}', 'scripts/**/*.ts', 'e2e/**/*.ts'],
     extends: [js.configs.recommended, tseslint.configs.recommended],
     languageOptions: { globals: globals.node },
   },

@@ -3,6 +3,8 @@ dist
 build
 .vite
 coverage
+test-results
+playwright-report
 scratch
 package-lock.json
 .claude

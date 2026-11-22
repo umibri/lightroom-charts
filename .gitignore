@@ -27,3 +27,5 @@ scratch
 
 # Test output
 coverage
+playwright-report
+test-results

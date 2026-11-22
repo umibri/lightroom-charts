@@ -21,17 +21,21 @@
     "verify": "npm run lint:strict && npm run format:check && npm run test && npm run build",
     "prepare": "husky",
     "inspect": "node scripts/inspect.ts",
-    "fixture": "node scripts/make-fixture.ts"
+    "fixture": "node scripts/make-fixture.ts",
+    "e2e": "playwright test"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.108.2",
     "@tanstack/react-router": "^1.170.46",
     "comlink": "^4.4.2",
+    "echarts": "^6.1.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "sql.js": "^1.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/vite": "^4.3.5",
     "@tanstack/react-router-devtools": "^1.167.4",
     "@types/node": "^24.19.2",
