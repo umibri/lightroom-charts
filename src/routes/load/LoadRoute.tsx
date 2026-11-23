@@ -5,12 +5,25 @@ import { setOpenCatalog } from '@/state/catalogStore';
 import { DEFAULT_RANGE } from '@/catalog/filters.ts';
 import type { OpenOutcome, OpenStage } from '@/worker/db.worker';
 import { ERROR_COPY, pickCatalog, type LoadErrorCode } from './pick.ts';
+import {
+  canRemember,
+  dropHandles,
+  fileFromHandle,
+  forgetRecent,
+  lastOpenedText,
+  loadRecent,
+  pickCatalogHandle,
+  saveRecent,
+  type RecentCatalog,
+} from '@/lib/recentCatalog';
+
+type Handle = FileSystemFileHandle | null;
 
 type State =
   | { kind: 'idle' }
-  | { kind: 'large'; file: File }
+  | { kind: 'large'; file: File; handle: Handle }
   | { kind: 'opening'; name: string; stage: OpenStage | 'demo' }
-  | { kind: 'error'; code: LoadErrorCode; file: File | null; detail?: string };
+  | { kind: 'error'; code: LoadErrorCode; file: File | null; handle?: Handle; detail?: string };
 
 const STAGES: { key: OpenStage; label: string }[] = [
   { key: 'reading', label: 'Reading the file' },
@@ -27,6 +40,17 @@ export default function LoadRoute() {
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
   const busy = state.kind === 'opening';
+  // Last successfully opened catalog (Chromium only; see recentCatalog.ts).
+  const [recent, setRecent] = useState<RecentCatalog | null>(null);
+  const [recentNote, setRecentNote] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+    void loadRecent().then((r) => alive && setRecent(r));
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   // Dropping a file anywhere in the window would otherwise make the browser
   // navigate to it, losing the app. Handle drops page-wide instead.
@@ -51,7 +75,9 @@ export default function LoadRoute() {
       e.preventDefault();
       depth = 0;
       setDragging(false);
-      if (!busy) choose(e.dataTransfer?.files ?? null);
+      // Handles must be requested now, while the drop's data is still available.
+      const handles = dropHandles(e.dataTransfer);
+      if (!busy) void choose(e.dataTransfer?.files ?? null, handles);
     };
     window.addEventListener('dragenter', enter);
     window.addEventListener('dragleave', leave);
@@ -65,27 +91,29 @@ export default function LoadRoute() {
     };
   });
 
-  function finish(res: OpenOutcome, file: File | null) {
+  function finish(res: OpenOutcome, file: File | null, handle: Handle = null) {
     if (res.ok) {
+      // Remember only catalogs that actually opened.
+      if (handle) void saveRecent(handle);
       setOpenCatalog(res.value);
       nav({ to: '/stats', search: { range: DEFAULT_RANGE } });
       return;
     }
     setOpenCatalog(null);
     console.error(res.error);
-    setState({ kind: 'error', code: res.error.code, file, detail: res.error.message });
+    setState({ kind: 'error', code: res.error.code, file, handle, detail: res.error.message });
   }
 
-  async function open(file: File) {
+  async function open(file: File, handle: Handle = null) {
     setState({ kind: 'opening', name: file.name, stage: 'reading' });
     try {
       const res = await openCatalog(file, (stage) =>
         setState((s) => (s.kind === 'opening' ? { ...s, stage } : s))
       );
-      finish(res, file);
+      finish(res, file, handle);
     } catch (e) {
       console.error(e);
-      setState({ kind: 'error', code: 'open-failed', file });
+      setState({ kind: 'error', code: 'open-failed', file, handle });
     }
   }
 
@@ -99,7 +127,10 @@ export default function LoadRoute() {
     }
   }
 
-  function choose(files: FileList | null) {
+  async function choose(
+    files: ArrayLike<File> | null,
+    handles: Promise<FileSystemFileHandle | null>[] = []
+  ) {
     const pick = pickCatalog(files);
     if (input.current) input.current.value = ''; // allow choosing the same file again
     if (pick.kind === 'none') return;
@@ -107,11 +138,49 @@ export default function LoadRoute() {
       setState({ kind: 'error', code: 'wrong-type', file: null, detail: pick.name });
       return;
     }
+    // The handle for the file we picked, if the browser gave us one.
+    const handle = (await Promise.all(handles)).find((h) => h?.name === pick.file.name) ?? null;
     if (pick.kind === 'large') {
-      setState({ kind: 'large', file: pick.file });
+      setState({ kind: 'large', file: pick.file, handle });
       return;
     }
-    void open(pick.file);
+    void open(pick.file, handle);
+  }
+
+  /** Use the system picker where it gives us a reusable handle. */
+  async function pickWithHandle() {
+    try {
+      const handle = await pickCatalogHandle();
+      if (!handle) return; // cancelled
+      await choose([await handle.getFile()], [Promise.resolve(handle)]);
+    } catch (e) {
+      console.error(e);
+      setState({ kind: 'error', code: 'read-failed', file: null });
+    }
+  }
+
+  async function reopen(r: RecentCatalog) {
+    setRecentNote('');
+    const res = await fileFromHandle(r.handle);
+    if (res.ok) {
+      await choose([res.file], [Promise.resolve(r.handle)]);
+      return;
+    }
+    if (res.reason === 'missing') {
+      await forgetRecent();
+      setRecent(null);
+      setRecentNote(`“${r.name}” is no longer there. It may have been moved, renamed or deleted.`);
+    } else if (res.reason === 'denied') {
+      setRecentNote('The browser didn’t allow reading the file. Choose it again below.');
+    } else {
+      setRecentNote('That catalog couldn’t be reopened. Choose it again below.');
+    }
+  }
+
+  async function forget() {
+    await forgetRecent();
+    setRecent(null);
+    setRecentNote('');
   }
 
   return (
@@ -126,7 +195,45 @@ export default function LoadRoute() {
       {from === 'stats' && state.kind === 'idle' && (
         <p className="rounded-xl border border-info-line bg-info-bg p-3 text-sm">
           No catalog is open. Catalogs stay in this tab’s memory only, so after a reload you need to
-          open yours again.
+          open yours again{recent ? ': use Reopen below.' : '.'}
+        </p>
+      )}
+
+      {recent && !busy && state.kind !== 'large' && (
+        <section
+          aria-label="Recent catalog"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-surface p-4"
+        >
+          <div className="min-w-0">
+            <div className="truncate font-medium" title={recent.name}>
+              {recent.name}
+            </div>
+            <div className="text-sm text-muted">
+              Last opened {lastOpenedText(recent.savedAt)} · remembered in this browser only
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              className="rounded-lg bg-fg px-4 py-1.5 font-medium text-bg"
+              onClick={() => void reopen(recent)}
+            >
+              Reopen
+            </button>
+            <button
+              type="button"
+              className="rounded-lg border border-line px-3 py-1.5 text-muted hover:text-fg"
+              onClick={() => void forget()}
+            >
+              Forget
+            </button>
+          </div>
+        </section>
+      )}
+
+      {recentNote && (
+        <p role="status" className="rounded-xl border border-warn-line bg-warn-bg p-3 text-sm">
+          {recentNote}
         </p>
       )}
 
@@ -134,6 +241,13 @@ export default function LoadRoute() {
         className={`block cursor-pointer rounded-2xl border-2 border-dashed px-6 py-10 text-center transition-colors focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent ${
           dragging ? 'border-accent bg-info-bg' : 'border-line-strong hover:bg-surface'
         } ${busy ? 'pointer-events-none opacity-60' : ''}`}
+        onClick={(e) => {
+          // Where supported, use the system picker: it returns a handle we can
+          // remember. Also covers Enter/Space on the focused input (a click).
+          if (!canRemember() || busy) return;
+          e.preventDefault();
+          void pickWithHandle();
+        }}
       >
         <input
           ref={input}
@@ -199,7 +313,7 @@ export default function LoadRoute() {
             <button
               type="button"
               className="rounded-lg bg-fg px-3 py-1.5 text-bg"
-              onClick={() => void open(state.file)}
+              onClick={() => void open(state.file, state.handle)}
             >
               Open anyway
             </button>
@@ -226,7 +340,7 @@ export default function LoadRoute() {
               <button
                 type="button"
                 className="rounded-lg bg-fg px-3 py-1.5 text-bg"
-                onClick={() => void open(state.file!)}
+                onClick={() => void open(state.file!, state.handle ?? null)}
               >
                 Try again
               </button>
@@ -234,7 +348,7 @@ export default function LoadRoute() {
             <button
               type="button"
               className="rounded-lg border border-line bg-surface px-3 py-1.5"
-              onClick={() => input.current?.click()}
+              onClick={() => (canRemember() ? void pickWithHandle() : input.current?.click())}
             >
               Choose another file
             </button>

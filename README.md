@@ -37,6 +37,7 @@ UI (React)  ──Comlink──▶  Web Worker  ──▶  sql.js (WASM SQLite, 
 - When you shoot: photos by hour of day and by day of week (local time, as Lightroom stores it)
 - Date range: last 12 or 24 months of the catalog (default 24; ending at your latest photo if that's before today), all time, or a custom month range; kept in the URL so back/forward and refresh-after-load keep your view
 - "Show data" under every chart lists the exact numbers (also read by screen readers)
+- **Reopen** your last catalog without picking it again (Chrome and Edge on desktop). The browser keeps a permission handle to the file in its own storage, not the file's contents; it asks you to allow reading the file again, and **Forget** removes it. Other browsers simply don't show the option.
 - No catalog handy? **Try with sample data** generates a demo catalog in the browser (works offline) and marks the page **Demo data**
 
 ## How photos are counted
