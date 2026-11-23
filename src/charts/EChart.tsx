@@ -1,12 +1,12 @@
 import { useEffect, useRef } from 'react';
 import * as echarts from 'echarts/core';
 import { BarChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent } from 'echarts/components';
+import { GridComponent, MarkLineComponent, TooltipComponent } from 'echarts/components';
 import { CanvasRenderer } from 'echarts/renderers';
 import type { EChartsCoreOption } from 'echarts/core';
 
-// Only what the app draws: bars, axes, tooltips. Keeps the bundle small.
-echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer]);
+// Only what the app draws: bars, axes, tooltips, average lines. Keeps the bundle small.
+echarts.use([BarChart, GridComponent, MarkLineComponent, TooltipComponent, CanvasRenderer]);
 
 interface Props {
   option: EChartsCoreOption;
