@@ -27,6 +27,10 @@ export interface ThemeColors {
   accent: string;
   /** Mark color for bars (validated per theme). */
   chart: string;
+  /** Highlight for the largest bar; falls back to `chart`. */
+  chartPeak?: string;
+  /** Skip entrance animations (prefers-reduced-motion). */
+  reducedMotion?: boolean;
   surface: string;
 }
 
@@ -40,6 +44,8 @@ function readColors(): ThemeColors {
     line: v('--line'),
     accent: v('--accent'),
     chart: v('--chart'),
+    chartPeak: v('--chart-peak'),
+    reducedMotion: window.matchMedia('(prefers-reduced-motion: reduce)').matches,
     surface: v('--surface'),
   };
 }
@@ -51,10 +57,13 @@ export function useThemeColors(): ThemeColors {
     const update = () => setColors(readColors());
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     mq.addEventListener('change', update);
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    motion.addEventListener('change', update);
     const mo = new MutationObserver(update);
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     return () => {
       mq.removeEventListener('change', update);
+      motion.removeEventListener('change', update);
       mo.disconnect();
     };
   }, []);

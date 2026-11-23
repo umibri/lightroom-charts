@@ -11,7 +11,7 @@ async function openDemo(page: Page) {
   await page.goto('./#/load');
   await page.getByRole('button', { name: 'Try with sample data' }).click();
   await expect(page.locator('canvas').first()).toBeVisible();
-  await page.waitForTimeout(600); // let bar animations finish
+  await page.waitForTimeout(1400); // let staggered bar animations finish
 }
 
 for (const scheme of ['light', 'dark'] as const) {

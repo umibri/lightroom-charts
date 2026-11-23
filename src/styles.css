@@ -20,6 +20,8 @@
   --accent: #1d5fd1;
   /* Chart marks. Validated (dataviz) for lightness band + 3:1 vs surface. */
   --chart: #1d5fd1;
+  /* Peak bar: a deeper step of the same hue, so the highlight reads as "most". */
+  --chart-peak: #0e3f99;
   --info-bg: #eef4ff;
   --info-line: #c6d8fb;
   --warn-bg: #fff6e5;
@@ -51,6 +53,7 @@
     --line-strong: #565862;
     --accent: #6ea2ff;
     --chart: #4a86ec;
+    --chart-peak: #9cc0ff;
     --info-bg: #142036;
     --info-line: #27416d;
     --warn-bg: #2a2111;
@@ -71,6 +74,7 @@
   --line-strong: #565862;
   --accent: #6ea2ff;
   --chart: #4a86ec;
+  --chart-peak: #9cc0ff;
   --info-bg: #142036;
   --info-line: #27416d;
   --warn-bg: #2a2111;

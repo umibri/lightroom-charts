@@ -5,6 +5,8 @@ import {
   rankingHeight,
   rankingOption,
   timelineOption,
+  peakIndex,
+  withAlpha,
 } from './options.ts';
 
 const colors = {
@@ -107,5 +109,51 @@ describe('chart font family', () => {
     }) as unknown as T;
     expect(withFont.textStyle.fontFamily).toBe('system-ui, sans-serif');
     expect(withFont.textStyle.fontFamily).not.toMatch(/inherit|initial|unset/);
+  });
+});
+
+describe('chart polish helpers', () => {
+  it('adds alpha to hex colors and passes others through', () => {
+    expect(withAlpha('#1d5fd1', 0.5)).toBe('rgba(29, 95, 209, 0.5)');
+    expect(withAlpha('#fff', 1)).toBe('rgba(255, 255, 255, 1)');
+    expect(withAlpha('red', 0.5)).toBe('red');
+  });
+
+  it('finds the peak bar, ignoring single bars and all-zero data', () => {
+    expect(peakIndex([1, 5, 3])).toBe(1);
+    expect(peakIndex([4, 4])).toBe(0);
+    expect(peakIndex([7])).toBe(-1);
+    expect(peakIndex([0, 0])).toBe(-1);
+  });
+
+  it('timeline gets an average line; a single month does not', () => {
+    type M = { series: { markLine?: unknown }[] };
+    const two = timelineOption(
+      [
+        { month: '2024-01', count: 1 },
+        { month: '2024-02', count: 3 },
+      ],
+      colors
+    ) as unknown as M;
+    expect(two.series[0].markLine).toBeDefined();
+    const one = timelineOption([{ month: '2024-01', count: 1 }], colors) as unknown as M;
+    expect(one.series[0].markLine).toBeUndefined();
+  });
+
+  it('turns animation off for reduced motion', () => {
+    type A = { animation: boolean };
+    const bins = [{ label: 'a', count: 1 }];
+    expect((columnOption(bins, colors) as unknown as A).animation).toBe(true);
+    expect((columnOption(bins, { ...colors, reducedMotion: true }) as unknown as A).animation).toBe(
+      false
+    );
+  });
+
+  it('escapes names in the tooltip', () => {
+    type T = { tooltip: { formatter: (p: { name: string; value: number }[]) => string } };
+    const o = columnOption([{ label: 'a', count: 1 }], colors) as unknown as T;
+    const html = o.tooltip.formatter([{ name: '<img src=x>', value: 2 }]);
+    expect(html).not.toContain('<img');
+    expect(html).toContain('2</b> photos');
   });
 });
