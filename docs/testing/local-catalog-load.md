@@ -22,6 +22,7 @@
 - **Drop anywhere**: dropping a file outside the drop zone is handled by the app; the browser never navigates to the file.
 - **Retry**: read and open failures (and out-of-memory) offer **Try again** with the same file.
 - **Demo**: **Try with sample data** opens a generated catalog with a **Demo data** badge.
+- **Reopen (Chrome/Edge desktop)**: pick a catalog by clicking the drop zone (system picker) or by dropping it, open it, then reload. Load shows **Reopen <name>** with when it was last opened. Reopen asks to allow reading the file once, then goes straight to Stats. **Forget** removes it. A catalog that was moved or deleted is reported and forgotten. Firefox/Safari: no Reopen card; loading works as before. Automated in `e2e/reopen.spec.ts` with a handle from the origin-private file system, since Playwright can't drive the native picker.
 - **Renamed non-database** (e.g. a `.txt` renamed to `.lrcat`): “isn’t a SQLite database”.
 - **Other SQLite database**: “a database, but not a Lightroom Classic catalog”.
 - **Large file (≥ 500 MB)**: a warning with the size and **Open anyway** / **Cancel**.
